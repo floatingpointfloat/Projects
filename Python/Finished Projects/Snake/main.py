@@ -1,6 +1,5 @@
 import pygame
 from sys import exit
-import numpy as np
 import random
 import time
 
@@ -11,6 +10,7 @@ snake_length = 1
 snake_body = []
 snake_head_x, snake_head_y = WIDTH // 2, HEIGHT // 2
 direction = random.choice(["UP", "DOWN", "LEFT", "RIGHT"])
+next_direction = direction
 speed = 0.15
 score = 0
 food_x, food_y, food_color = 0, 0, (255, 0, 0)
@@ -28,7 +28,7 @@ def grow():
     snake_length += 1
     score += 1
     if speed > 0.01:
-        speed -= 0.01
+        speed += 0.01
 
 def check_collision():
     global snake_body, snake_head_x, snake_head_y, running
@@ -42,7 +42,8 @@ def check_collision():
         return False
 
 def move_snake():
-    global snake_head_x, snake_head_y, snake_body, snake_length
+    global snake_head_x, snake_head_y, snake_body, snake_length, direction
+    direction = next_direction
     if direction == "UP":
         snake_head_y -= 1
     elif direction == "DOWN":
@@ -68,6 +69,16 @@ def check_food():
     if (snake_head_x, snake_head_y) == (food_x, food_y):
         grow()
         food_x, food_y = spawn_food()
+
+
+def is_opposite_direction(current_direction, candidate_direction):
+    opposites = {
+        "UP": "DOWN",
+        "DOWN": "UP",
+        "LEFT": "RIGHT",
+        "RIGHT": "LEFT",
+    }
+    return opposites[current_direction] == candidate_direction
     
     
 if __name__ == "__main__":
@@ -79,19 +90,23 @@ if __name__ == "__main__":
                 pygame.quit()
                 exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP and direction != "DOWN":
-                    direction = "UP"
-                elif event.key == pygame.K_DOWN and direction != "UP":
-                    direction = "DOWN"
-                elif event.key == pygame.K_LEFT and direction != "RIGHT":
-                    direction = "LEFT"
-                elif event.key == pygame.K_RIGHT and direction != "LEFT":
-                    direction = "RIGHT"
+                queued_direction = None
+                if event.key == pygame.K_UP:
+                    queued_direction = "UP"
+                elif event.key == pygame.K_DOWN:
+                    queued_direction = "DOWN"
+                elif event.key == pygame.K_LEFT:
+                    queued_direction = "LEFT"
+                elif event.key == pygame.K_RIGHT:
+                    queued_direction = "RIGHT"
+                if queued_direction and not is_opposite_direction(direction, queued_direction):
+                    next_direction = queued_direction
                 elif event.key == pygame.K_SPACE and not running:
                     snake_head_x, snake_head_y = WIDTH // 2, HEIGHT // 2
                     snake_body = []
                     snake_length, score, speed = 1, 0, 0.15
                     direction = random.choice(["UP", "DOWN", "LEFT", "RIGHT"])
+                    next_direction = direction
                     food_x, food_y = spawn_food()
                     running = True
                     
