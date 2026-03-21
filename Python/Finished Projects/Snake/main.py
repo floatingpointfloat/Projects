@@ -7,7 +7,6 @@ import time
 #variables
 WIDTH, HEIGHT = 50, 50
 pixels_per_tile = 15
-#tiles = np.zeros((WIDTH, HEIGHT), dtype=int)
 snake_length = 1
 snake_body = []
 snake_head_x, snake_head_y = WIDTH // 2, HEIGHT // 2
