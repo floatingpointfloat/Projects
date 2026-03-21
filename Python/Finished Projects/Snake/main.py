@@ -28,7 +28,7 @@ def grow():
     snake_length += 1
     score += 1
     if speed > 0.01:
-        speed += 0.01
+        speed -= 0.01
 
 def check_collision():
     global snake_body, snake_head_x, snake_head_y, running
