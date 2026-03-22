@@ -3,17 +3,21 @@ import pygame
 from pygame import Vector2
 import math
 from sys import exit
-#<<<
-#>>>
+
+WIDTH, HEIGHT = 1000, 1000
 
 pygame.init()
-screen = pygame.display.set_mode((1000, 1000))
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Gravity_simulation")
 clock = pygame.time.Clock()
 
 # variables:
 G = 5
 start_mass = 1500
+
+#glow and bloom
+bloom_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+trail_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
 
 class Body:
     def __init__(self, pos, vel, mass, color):
@@ -29,7 +33,7 @@ class Body:
         direction = other.pos - self.pos
         distance = direction.length()
 
-        force_magnitude = (G * self.mass * other.mass) / distance**2
+        force_magnitude = (G * self.mass * other.mass) / distance**2 + 0.01
         force_direction = direction.normalize()
 
         if distance <= 3:
@@ -56,14 +60,21 @@ class Body:
         self.pos += self.vel * dt
         self.acc = Vector2(0, 0)
 
-    def trail_lines(self):
+    def draw_trail(self, trail_surface, bloom_surface):
         if len(self.trail) > 200:
             self.trail.pop(0)
         self.trail.append(self.pos.copy())
 
-        if len(self.trail) > 2:
-            pygame.draw.lines(screen, self.color, False, self.trail, 1)
-
+        for i in range(1, len(self.trail)):
+            position1 = self.trail[i - 1]
+            position2 = self.trail[i]
+            alpha = int(255 * (i / len(self.trail)))
+            width = int(3 * (i / len(self.trail))) + 1
+            color_with_alpha = (*self.color, alpha)
+            
+            pygame.draw.line(trail_surface, color_with_alpha, position1, position2, width)
+            if alpha > 50:
+                pygame.draw.line(bloom_surface, color_with_alpha, position1, position2, width)
 
 # bodies:
 bodies = []
@@ -104,14 +115,21 @@ while True:
 
                 for body in bodies:
                     pygame.draw.circle(screen, body.color, body.pos, body.radius)
-                    body.trail_lines()
 
                 for event in pygame.event.get():
                     if event.type == pygame.MOUSEMOTION:
                         second_pos = Vector2(event.pos)
 
                     if event.type == pygame.MOUSEBUTTONUP:
-                        bodies.append(Body(initial_pos,start_vel,start_mass,(random.randint(0, 255),random.randint(0, 255),random.randint(0, 255))))
+                        color = random.choice([1, 2, 3])
+                        if color == 1:
+                            bodies.append(Body(initial_pos,start_vel,start_mass,(min(int(random.randint(0, 255)*4), 255),random.randint(0, 255),random.randint(0, 255))))
+                            
+                        elif color == 2:
+                           bodies.append(Body(initial_pos,start_vel,start_mass,(random.randint(0, 255),min(int(random.randint(0, 255)*4), 255),random.randint(0, 255))))
+
+                        elif color == 3:
+                            bodies.append(Body(initial_pos,start_vel,start_mass,(random.randint(0, 255),random.randint(0, 255),min(int(random.randint(0, 255)*4), 255))))
                         dragging = False
 
                 pygame.draw.line(screen, (255, 255, 255), initial_pos, second_pos, 3)
@@ -126,12 +144,32 @@ while True:
         body.update(dt)
 
     screen.fill((0, 0, 0))
-
+    bloom_surface.fill((0, 0, 0, 0))
+    trail_surface.fill((0, 0, 0, 0))
+    
     for body in bodies:
+        body.draw_trail(trail_surface, bloom_surface)
+    
+    bodies_to_remove = []
+    for body in bodies:
+        pygame.draw.circle(screen, (255, 255, 255), body.pos, body.radius * 0.6)
         pygame.draw.circle(screen, body.color, body.pos, body.radius)
-        body.trail_lines()
+    
+        brightness = sum(body.color) / 3
+        if brightness > 100:
+            pygame.draw.circle(bloom_surface, body.color, body.pos, body.radius)
 
-        if abs(body.pos.x) > 2000 or abs(body.pos.y) > 2000:
-            bodies.remove(body)
+        if abs(body.pos.x) > WIDTH*2 or abs(body.pos.y) > HEIGHT*2:
+            bodies_to_remove.append(body)
+    for body in bodies_to_remove:
+        bodies.remove(body)
+    
+    #glow and bloom
+    #blur
+    small_blur = pygame.transform.smoothscale(bloom_surface, (WIDTH // 6, HEIGHT // 6))
+    blur = pygame.transform.smoothscale(small_blur, (WIDTH, HEIGHT))
+    
+    screen.blit(trail_surface, (0, 0))
+    screen.blit(blur, (0, 0), special_flags=pygame.BLEND_ADD)
 
     pygame.display.update()
