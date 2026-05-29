@@ -313,13 +313,13 @@ class Renderer():
     if keys[pygame.K_DOWN] and self.spawning_mass > 50:
       self.spawning_mass -= 5
     if keys[pygame.K_w] and self.camera_pos[1] >= 0: #prevent moving beyond the edges
-      self.camera_pos[1] -= 1 / self.zoom
+      self.camera_pos[1] -= 4 / self.zoom
     if keys[pygame.K_s] and self.camera_pos[1] <= world_size - HEIGHT:
-      self.camera_pos[1] += 1 / self.zoom
+      self.camera_pos[1] += 4 / self.zoom
     if keys[pygame.K_a] and self.camera_pos[0] >= 0:
-      self.camera_pos[0] -= 1 / self.zoom
+      self.camera_pos[0] -= 4 / self.zoom
     if keys[pygame.K_d] and self.camera_pos[0] <= world_size - WIDTH:
-      self.camera_pos[0] += 1 / self.zoom
+      self.camera_pos[0] += 4 / self.zoom
 
   def input_handling(self,sim):
     self.constant_key_detection()
