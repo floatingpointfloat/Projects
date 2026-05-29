@@ -1,4 +1,8 @@
 #my try at verlet integration for a numerically stable n-body simulation of gravitation
+# quadtree and barnes hut
+# world - camera separated -> zoom, moving, 1000000**2 world
+# (relatively) stable gravitation and collision
+# spawning and manipulation of objects
 import pygame
 import numpy as np
 from sys import exit
