@@ -167,7 +167,6 @@ class Simulation():
     self.G = 10
     self.dt = 1/240
     self.framecount = 0
-    self.tree = Quadtree()
     self.positions = np.empty((0,2), dtype=np.float64)
     self.old_positions = np.empty((0,2), dtype=np.float64)
     self.accelerations = np.empty((0,2), dtype=np.float64)
@@ -175,9 +174,6 @@ class Simulation():
     self.masses = np.empty(0, dtype=np.float64)
     self.radii = np.empty(0, dtype=np.float64)
     self.trails = []
-
-    for i in range(len(self.positions)): #for the first calculation
-      self.tree.insert(self,i)
 
   def add_body(self, pos, vel, mass):
     pos = np.array(pos, dtype=np.float64)
@@ -194,9 +190,14 @@ class Simulation():
 
   def calculate_acceleration(self):
     self.accelerations[:] = 0 #prevent accumulating accelerations - obvious reasons
+    tree = Quadtree()
+    objects_len = len(self.positions)
 
-    for i in range(len(self.positions)):
-      self.tree.compute_acceleration(self,i,accuracy)
+    for i in range(objects_len):
+      tree.insert(self,i)
+
+    for i in range(objects_len):
+      tree.compute_acceleration(self,i,accuracy)
 
   def update_positions(self): #velocity verlet integration
     self.positions += (self.velocities * self.dt + 0.5 * self.accelerations * self.dt**2)
@@ -208,12 +209,17 @@ class Simulation():
     objects_len = len(self.positions)
     checked = set() #keine duplikate
 
+    tree = Quadtree()
+    
+    for i in range(objects_len):
+      tree.insert(self,i)
+
     for i in range(objects_len):
       found = []
       r = self.radii[i]
       search_radius =r + np.max(self.radii)
 
-      self.tree.root.collision_partners(
+      tree.root.collision_partners(
           self.positions[i][0] - search_radius,
           self.positions[i][1] - search_radius,
           search_radius * 2,
@@ -272,10 +278,6 @@ class Simulation():
       self.presets(2)
 
   def physics_update(self):
-    self.tree = Quadtree()
-    for i in range(len(self.positions)):
-      self.tree.insert(self, i)
-
     self.old_positions = self.positions.copy() #needed for velocity update later on
     old_accelerations = self.accelerations.copy()
 
@@ -388,7 +390,7 @@ class Renderer():
     print(f"frame: {self.fps}")
 
 sim = Simulation()
-sim.presets(2) #colab debug setup (no visual feedback) :(
+sim.presets(1) #colab debug setup (no visual feedback) :(
 sim.calculate_acceleration()
 renderer = Renderer(screen)
 
