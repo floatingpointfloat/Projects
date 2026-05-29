@@ -270,8 +270,8 @@ class Simulation():
 
         self.add_body(pos,vel,mass)
     elif preset == 3:
-      self.add_body((world_size/2,world_size/2 + 300),(0,-10),20000)
-      self.add_body((world_size/2,world_size/2 - 300),(0,10),20000)
+      self.add_body((world_size/2,world_size/2 + 300),(-10,0),20000)
+      self.add_body((world_size/2,world_size/2 - 300),(10,0),20000)
       self.presets(2)
 
   def physics_update(self):
