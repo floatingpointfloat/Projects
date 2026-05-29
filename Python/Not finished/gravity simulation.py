@@ -382,7 +382,7 @@ class Renderer():
     print(f"frame: {self.fps}")
 
 sim = Simulation()
-sim.presets(2) #colab debug setup (no visual feedback) :(
+sim.presets(1) #colab debug setup (no visual feedback) :(
 sim.calculate_acceleration()
 renderer = Renderer(screen)
 
