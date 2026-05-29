@@ -376,7 +376,7 @@ class Renderer():
   def draw_world_border(self):
     topleft = self.world_to_screen((0,0))
 
-    pygame.draw.rect(self.screen, (255,255,255), (topleft[0],topleft[1],world_size,world_size), width=10)
+    pygame.draw.rect(self.screen, (255,255,255), (topleft[0],topleft[1],world_size*self.zoom,world_size*self.zoom), width=10)
 
   def draw_to_screen(self):
     self.screen.fill((0,0,0)) #screen reset
