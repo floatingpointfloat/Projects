@@ -9,7 +9,7 @@ import time
 
 #variables
 WIDTH, HEIGHT = 700, 700
-world_size = 10000
+world_size = 1000000
 accuracy = 0.5
 
 #setup
@@ -371,18 +371,24 @@ class Renderer():
         if len(sim.trails[i]) > 1:
           pygame.draw.lines(self.screen, (130, 90, int(min(255, 60 + 4 * np.linalg.norm(sim.velocities[i])))), False, points, 2)
 
+  def draw_world_border(self):
+    topleft = self.world_to_screen((0,0))
+
+    pygame.draw.rect(self.screen, (255,255,255), (topleft[0],topleft[1],world_size,world_size), width=10)
+
   def draw_to_screen(self):
     self.screen.fill((0,0,0)) #screen reset
 
     self.draw_drag_arrow()
     #self.draw_trail(sim)
     self.draw_bodies(sim)
+    self.draw_world_border()
 
     self.fps += 1
     print(f"frame: {self.fps}")
 
 sim = Simulation()
-sim.presets(1) #colab debug setup (no visual feedback) :(
+sim.presets(2) #colab debug setup (no visual feedback) :(
 sim.calculate_acceleration()
 renderer = Renderer(screen)
 
