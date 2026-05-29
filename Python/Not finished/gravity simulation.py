@@ -19,7 +19,7 @@ pygame.display.set_caption("Gravity sim")
 clock = pygame.time.Clock()
 
 class Quadnodes():
-  def _init_(self, x, y, size):
+  def __init__(self, x, y, size):
     self.x = x
     self.y = y
     self.size = size
@@ -135,8 +135,25 @@ class Quadnodes():
         if child.mass > 0: #only traverse the neccessary parts of the tree
           child.compute_acceleration(sim,body_index,accuracy)
 
+  def intersects_node(self,x,y,size): #fir collisions - check, if a partner is in the same leaf node
+    return not (self.x + self.size < x or
+                self.x > x + size or
+                self.y + self.size < y or
+                self.y > y + size)
+
+  def collision_partners(self, x, y, size, found):
+    if not self.intersects_node(x, y, size):
+      return
+
+    if self.children is None:
+      found.extend(self.body_indices)
+      return
+
+    for child in self.children:
+      child.collision_partners(x, y, size, found)
+
 class Quadtree(): #"wrapperclass"
-  def _init_(self):
+  def __init__(self):
     self.root = Quadnodes(0,0, world_size) #i didn'g limit the size of the world to the screen
 
   def insert(self,sim,body_index):
@@ -146,7 +163,7 @@ class Quadtree(): #"wrapperclass"
     self.root.compute_acceleration(sim,body_index,accuracy)
 
 class Simulation():
-  def _init_(self):
+  def __init__(self):
     self.G = 10
     self.dt = 1/240
     self.framecount = 0
@@ -189,9 +206,32 @@ class Simulation():
     self.velocities += (0.5 * (old_accelerations + self.accelerations) * self.dt)
 
   def solve_collision(self): #still not optimised
-    object_count = len(self.positions)
-    for i in range(object_count):
-      for j in range(i+1,object_count):
+    tree = Quadtree()
+    objects_len = len(self.positions)
+    checked = set() #keine duplikate
+
+    for i in range(objects_len):
+      tree.insert(self,i)
+
+    for i in range(objects_len):
+      found = []
+      r = self.radii[i]
+
+      tree.root.collision_partners(
+          self.positions[i][0] - r*2,
+          self.positions[i][1] - r*2,
+          r*4,
+          found)
+
+      for j in found:
+        if i >= j:
+          continue
+
+        pair = (i,j)
+        if pair in checked:
+          continue
+        checked.add(pair)
+
         offset = self.positions[j] - self.positions[i]
         dist = np.linalg.norm(offset)
         min_dist = self.radii[j] + self.radii[i]
@@ -220,7 +260,7 @@ class Simulation():
       self.add_body((world_size/2,world_size/2),(0,0),20000)
     elif preset == 2:
       center = np.array([world_size/2,world_size/2])
-      for _ in range(500):
+      for _ in range(150):
         r = abs(random.gauss(80, 60))
         rotation = random.uniform(0, 2*np.pi)
 
@@ -251,12 +291,13 @@ class Simulation():
     self.framecount += 1
 
 class Renderer():
-  def _init_(self, screen):
+  def __init__(self, screen):
     self.screen = screen
     self.camera_pos = np.array([world_size/2,world_size/2])
     self.zoom = 1
     self.spawning_mass = 1500
     self.dragging = False
+    self.fps = 0
 
   def screen_to_world(self, screen_pos): #changing screen coordinates into world coordinates and taking zooming into account
     return ((np.array(screen_pos) - np.array([WIDTH/2, HEIGHT/2])) / self.zoom + self.camera_pos)
@@ -336,12 +377,15 @@ class Renderer():
     #self.draw_trail(sim)
     self.draw_bodies(sim)
 
+    self.fps += 1
+    print(f"frame: {self.fps}")
+
 sim = Simulation()
-sim.presets(3) #colab debug setup (no visual feedback) :(
+sim.presets(2) #colab debug setup (no visual feedback) :(
 sim.calculate_acceleration()
 renderer = Renderer(screen)
 
-if _name_ == '_main_':
+if __name__ == '__main__':
   while True:
     renderer.input_handling(sim)
     for _ in range(4): #substeps (sim.dt has to be 4 times higher to compensate and enable true substepping)
