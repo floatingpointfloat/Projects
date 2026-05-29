@@ -23,7 +23,7 @@ class Quadnodes():
     self.x = x
     self.y = y
     self.size = size
-    self.MIN_SIZE = 1
+    self.MIN_SIZE = 8
     self.MAX_BODIES = 4
 
     self.children = None
@@ -167,6 +167,7 @@ class Simulation():
     self.G = 10
     self.dt = 1/240
     self.framecount = 0
+    self.tree = Quadtree()
     self.positions = np.empty((0,2), dtype=np.float64)
     self.old_positions = np.empty((0,2), dtype=np.float64)
     self.accelerations = np.empty((0,2), dtype=np.float64)
@@ -174,6 +175,9 @@ class Simulation():
     self.masses = np.empty(0, dtype=np.float64)
     self.radii = np.empty(0, dtype=np.float64)
     self.trails = []
+
+    for i in range(len(self.positions)): #for the first calculation
+      self.tree.insert(self,i)
 
   def add_body(self, pos, vel, mass):
     pos = np.array(pos, dtype=np.float64)
@@ -190,14 +194,9 @@ class Simulation():
 
   def calculate_acceleration(self):
     self.accelerations[:] = 0 #prevent accumulating accelerations - obvious reasons
-    tree = Quadtree() #barnes hit optimization
-    positions_len = len(self.positions) #just so its precalculated
 
-    for i in range(positions_len):
-      tree.insert(self,i)
-
-    for i in range(positions_len):
-      tree.compute_acceleration(self,i,accuracy)
+    for i in range(len(self.positions)):
+      self.tree.compute_acceleration(self,i,accuracy)
 
   def update_positions(self): #velocity verlet integration
     self.positions += (self.velocities * self.dt + 0.5 * self.accelerations * self.dt**2)
@@ -206,21 +205,18 @@ class Simulation():
     self.velocities += (0.5 * (old_accelerations + self.accelerations) * self.dt)
 
   def solve_collision(self): #still not optimised
-    tree = Quadtree()
     objects_len = len(self.positions)
     checked = set() #keine duplikate
 
     for i in range(objects_len):
-      tree.insert(self,i)
-
-    for i in range(objects_len):
       found = []
       r = self.radii[i]
+      search_radius =r + np.max(self.radii)
 
-      tree.root.collision_partners(
-          self.positions[i][0] - r*2,
-          self.positions[i][1] - r*2,
-          r*4,
+      self.tree.root.collision_partners(
+          self.positions[i][0] - search_radius,
+          self.positions[i][1] - search_radius,
+          search_radius * 2,
           found)
 
       for j in found:
@@ -233,13 +229,14 @@ class Simulation():
         checked.add(pair)
 
         offset = self.positions[j] - self.positions[i]
-        dist = np.linalg.norm(offset)
+        dist_sq = np.dot(offset,offset)
         min_dist = self.radii[j] + self.radii[i]
 
-        if dist == 0: #exploding
+        if dist_sq == 0: #exploding
           continue
 
-        if dist < min_dist: #overlap
+        if dist_sq < min_dist**2: #overlap
+          dist = np.sqrt(dist_sq)
           penetration = min_dist - dist
           normal = offset / dist
           total_mass = self.masses[i] + self.masses[j]
@@ -275,6 +272,10 @@ class Simulation():
       self.presets(2)
 
   def physics_update(self):
+    self.tree = Quadtree()
+    for i in range(len(self.positions)):
+      self.tree.insert(self, i)
+
     self.old_positions = self.positions.copy() #needed for velocity update later on
     old_accelerations = self.accelerations.copy()
 
