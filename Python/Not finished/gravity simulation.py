@@ -332,8 +332,6 @@ class Renderer():
     self.zoom = 1
     self.spawning_mass = 1500
     self.dragging = False
-    self.frames = 0
-    self.time_last_frame = 0.0001
     self.font = pygame.font.SysFont("Arial",15)
 
   def screen_to_world(self, screen_pos): #changing screen coordinates into world coordinates and taking zooming into account
@@ -413,14 +411,11 @@ class Renderer():
     pygame.draw.rect(self.screen, (255,255,255), (topleft[0],topleft[1],world_size*self.zoom,world_size*self.zoom), width=10)
 
   def show_fps(self):
-    fps = 1 / (time.time() - self.time_last_frame)
-    fps = round(fps,1)
+    fps = round(clock.get_fps(),1)
     print(fps) #debug colab
 
     fps_surf = self.font.render(f"FPS: {fps}",True, (255, 255, 255))
     self.screen.blit(fps_surf, (10,10))
-
-    self.time_last_frame = time.time()
 
   def draw_to_screen(self):
     self.screen.fill((0,0,0)) #screen reset
@@ -431,7 +426,6 @@ class Renderer():
     self.draw_world_border()
 
     self.show_fps()
-    self.frames += 1
 
 sim = Simulation()
 sim.presets(1) #colab debug setup (no visual feedback) :(
