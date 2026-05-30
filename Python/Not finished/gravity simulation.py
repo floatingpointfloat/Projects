@@ -1,7 +1,7 @@
 #my try at verlet integration for a numerically stable n-body simulation of gravitation
 # quadtree and barnes hut
 # world - camera separated -> zoom, moving, 1000000**2 world
-# (relatively) stable gravitation and collision
+# (relatively) stable gravitation (softening) and collision
 # spawning and manipulation of objects
 import pygame
 import numpy as np
@@ -191,6 +191,15 @@ class Simulation():
     self.radii = np.append(self.radii, (math.sqrt(mass / math.pi) / 6)) #radius in relation to mass, change the number at the end to change size
     self.accelerations = np.vstack([self.accelerations, np.zeros(2)])
     self.trails.append(deque(maxlen=200))
+  
+  def body_reset(self):
+    self.positions = np.empty((0,2), dtype=np.float64)
+    self.old_positions = np.empty((0,2), dtype=np.float64)
+    self.accelerations = np.empty((0,2), dtype=np.float64)
+    self.velocities = np.empty((0,2), dtype=np.float64)
+    self.masses = np.empty(0, dtype=np.float64)
+    self.radii = np.empty(0, dtype=np.float64)
+    self.trails = []
 
   def calculate_acceleration(self):
     self.accelerations[:] = 0 #prevent accumulating accelerations - obvious reasons
@@ -214,7 +223,7 @@ class Simulation():
     checked = set() #keine duplikate
 
     tree = Quadtree()
-    
+
     for i in range(objects_len):
       tree.insert(self,i)
 
@@ -264,8 +273,11 @@ class Simulation():
 
   def presets(self,preset): #presets to choose from
     if preset == 1:
-      self.add_body((world_size/2,world_size/2),(0,0),20000)
+      self.body_reset()
+      self.add_body((world_size/2, world_size/2 + 300), (-10, 0), 20000) 
+      self.add_body((world_size/2, world_size/2 - 300), (10,0), 20000)
     elif preset == 2:
+      self.body_reset()
       center = np.array([world_size/2,world_size/2])
       for _ in range(150):
         r = abs(random.gauss(80, 60))
@@ -277,6 +289,7 @@ class Simulation():
 
         self.add_body(pos,vel,mass)
     elif preset == 3:
+      self.body_reset()
       self.add_body((world_size/2,world_size/2 + 300),(-10,0),20000)
       self.add_body((world_size/2,world_size/2 - 300),(10,0),20000)
       self.presets(2)
