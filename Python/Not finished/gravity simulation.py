@@ -1,7 +1,7 @@
 #my try at verlet integration for a numerically stable n-body simulation of gravitation
 # quadtree and barnes hut
 # world - camera separated -> zoom, moving, 1000000**2 world
-# (relatively) stable gravitation (softening) and collision
+# (relatively) stable gravitation and collision
 # spawning and manipulation of objects
 import pygame
 import numpy as np
@@ -266,6 +266,23 @@ class Simulation():
           self.positions[i] -= correction_i
           self.positions[j] += correction_j
 
+          #velocity correcting
+          relative_velocity = self.velocities[j] - self.velocities[i]
+          velocity_along_normal = np.dot(relative_velocity,normal)
+
+          if velocity_along_normal > 0: #bodys are already moving apart
+            continue
+          
+          bounciness = 0.3 #1 = perfectly elastic, 0 = opposite
+          impulse = -(1 + bounciness) * velocity_along_normal
+          impulse /= (1 / self.masses[i] + 1 / self.masses[j])
+
+          impulse_vector = impulse * normal
+
+          #velocity correcting
+          self.velocities[i] -= impulse_vector / self.masses[i]
+          self.velocities[j] += impulse_vector / self.masses[j] 
+
   def update_trails(self):
     if self.framecount % 3 == 0: #save computing power, it doesn't ned a point every frame
       for i in range(len(self.positions)):
@@ -302,10 +319,8 @@ class Simulation():
     self.calculate_acceleration()
     self.update_velocities(old_accelerations)
 
-    for _ in range(10): #several solves for stability
+    for _ in range(4): #several solves for stability
       self.solve_collision()
-
-    self.velocities = (self.positions - self.old_positions) / self.dt #correct for collision
 
     #self.update_trails() #eeeeexpensive, not needed at first
     self.framecount += 1
@@ -317,7 +332,9 @@ class Renderer():
     self.zoom = 1
     self.spawning_mass = 1500
     self.dragging = False
-    self.fps = 0
+    self.frames = 0
+    self.time_last_frame = 0.0001
+    self.font = pygame.font.SysFont("Arial",15)
 
   def screen_to_world(self, screen_pos): #changing screen coordinates into world coordinates and taking zooming into account
     return ((np.array(screen_pos) - np.array([WIDTH/2, HEIGHT/2])) / self.zoom + self.camera_pos)
@@ -395,6 +412,16 @@ class Renderer():
 
     pygame.draw.rect(self.screen, (255,255,255), (topleft[0],topleft[1],world_size*self.zoom,world_size*self.zoom), width=10)
 
+  def show_fps(self):
+    fps = 1 / (time.time() - self.time_last_frame)
+    fps = round(fps,1)
+    print(fps) #debug colab
+
+    fps_surf = self.font.render(f"FPS: {fps}",True, (255, 255, 255))
+    self.screen.blit(fps_surf, (10,10))
+
+    self.time_last_frame = time.time()
+
   def draw_to_screen(self):
     self.screen.fill((0,0,0)) #screen reset
 
@@ -403,8 +430,8 @@ class Renderer():
     self.draw_bodies(sim)
     self.draw_world_border()
 
-    self.fps += 1
-    print(f"frame: {self.fps}")
+    self.show_fps()
+    self.frames += 1
 
 sim = Simulation()
 sim.presets(1) #colab debug setup (no visual feedback) :(
