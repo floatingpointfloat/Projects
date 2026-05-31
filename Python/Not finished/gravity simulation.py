@@ -192,7 +192,7 @@ class Simulation():
     self.radii = np.append(self.radii, (math.sqrt(mass / math.pi) / 6)) #radius in relation to mass, change the number at the end to change size
     self.accelerations = np.vstack([self.accelerations, np.zeros(2)])
     self.trails.append(deque(maxlen=200))
-  
+
   def body_reset(self):
     self.positions = np.empty((0,2), dtype=np.float64)
     self.old_positions = np.empty((0,2), dtype=np.float64)
@@ -218,7 +218,7 @@ class Simulation():
 
   def update_velocities(self, old_accelerations): #new velocities
     self.velocities += (0.5 * (old_accelerations + self.accelerations) * self.dt)
-  
+
   def impact_breaking(self,body_index):
     impact_pos = self.positions[body_index].copy()
     fragment_count = random.randint(3,10)
@@ -229,7 +229,7 @@ class Simulation():
       angle = (2*np.pi*i)/fragment_count #uniform distribution
       angle += random.uniform(-0.2,0.2)
       offset = np.array([
-          np.cos(angle), 
+          np.cos(angle),
           np.sin(angle)])
       fragment_radius = math.sqrt(fragment_masses[i] / math.pi) / 6
       spawn_pos = (impact_pos + offset * (self.radii[body_index] + fragment_radius)) #spawning the bodies outside of the parent body
@@ -240,12 +240,12 @@ class Simulation():
     #deleting the body
     self.positions = np.delete(self.positions,body_index,axis=0)
     self.old_positions = np.delete(self.old_positions,body_index,axis=0)
-    self.velocities = np.delete(self.velocities,body_index,axis=0) 
-    self.accelerations = np.delete(self.accelerations,body_index,axis=0) 
-    self.masses = np.delete(self.masses,body_index,axis=0) 
-    self.radii = np.delete(self.radii,body_index,axis=0) 
+    self.velocities = np.delete(self.velocities,body_index,axis=0)
+    self.accelerations = np.delete(self.accelerations,body_index,axis=0)
+    self.masses = np.delete(self.masses,body_index,axis=0)
+    self.radii = np.delete(self.radii,body_index,axis=0)
     del self.trails[body_index]
-  
+
   def collision_velocity_correcting(self,i,j,normal):
     relative_velocity = self.velocities[j] - self.velocities[i]
     velocity_along_normal = np.dot(relative_velocity, normal)
@@ -255,7 +255,7 @@ class Simulation():
     impulse = -(1 + bounciness) * velocity_along_normal
     impulse /= (1 / self.masses[i] + 1 / self.masses[j])
     impulse_vector = impulse * normal
-    
+
     #velocity correcting
     self.velocities[i] -= impulse_vector / self.masses[i]
     self.velocities[j] += impulse_vector / self.masses[j]
@@ -287,7 +287,7 @@ class Simulation():
         pair = (i,j)
         if pair in checked:
           continue
-        
+
         offset = self.positions[j] - self.positions[i]
         dist_sq = np.dot(offset,offset)
         dist = np.sqrt(dist_sq)
@@ -336,12 +336,12 @@ class Simulation():
   def presets(self,preset): #presets to choose from
     if preset == 1:
       self.body_reset()
-      self.add_body((world_size/2, world_size/2 + 300), (-10, 0), 20000) 
+      self.add_body((world_size/2, world_size/2 + 300), (-10, 0), 20000)
       self.add_body((world_size/2, world_size/2 - 300), (10,0), 20000)
     elif preset == 2:
       self.body_reset()
       center = np.array([world_size/2,world_size/2])
-      for _ in range(150):
+      for _ in range(40):
         r = abs(random.gauss(80, 60))
         rotation = random.uniform(0, 2*np.pi)
 
@@ -385,6 +385,10 @@ class Renderer():
   def world_to_screen(self, world_pos): #world coordinates to screen coordinates
     return ((world_pos - self.camera_pos) * self.zoom + np.array([WIDTH/2, HEIGHT/2]))
 
+  def camera_reset(self):
+    self.zoom = 1
+    self.camera_pos = np.array([world_size/2,world_size/2])
+
   def constant_key_detection(self): #for continous key events
     keys = pygame.key.get_pressed()
     if keys[pygame.K_UP] and self.spawning_mass < 20000:
@@ -417,11 +421,17 @@ class Renderer():
         vel = (np.array(self.drag_end) - np.array(self.drag_start)) * 0.1
         sim.add_body(self.drag_start,vel,self.spawning_mass)
       if event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_0:
+          self.camera_reset()
+          sim.body_reset()
         if event.key == pygame.K_1:
+          self.camera_reset()
           sim.presets(1)
         if event.key == pygame.K_2:
+          self.camera_reset()
           sim.presets(2)
         if event.key == pygame.K_3:
+          self.camera_reset()
           sim.presets(3)
       if event.type == pygame.MOUSEWHEEL: #zoom
         if event.y < 0 and self.zoom > 0.1:
@@ -433,10 +443,10 @@ class Renderer():
     for i in range(len(sim.positions)):
       pos = self.world_to_screen(sim.positions[i])
       pygame.draw.circle(
-    self.screen,
-    (130, 90, int(min(255, 60 + 4 * np.linalg.norm(sim.velocities[i])))), #adjust color for speed
-    pos,
-    int(sim.radii[i]*self.zoom))
+          self.screen,
+          (130, 90, int(min(255, 60 + 4 * np.linalg.norm(sim.velocities[i])))), #adjust color for speed
+          pos,
+          int(sim.radii[i]*self.zoom))
 
   def draw_drag_arrow(self):
     if self.dragging:
@@ -453,14 +463,23 @@ class Renderer():
   def draw_world_border(self):
     topleft = self.world_to_screen((0,0))
 
-    pygame.draw.rect(self.screen, (255,255,255), (topleft[0],topleft[1],world_size*self.zoom,world_size*self.zoom), width=10)
+    pygame.draw.rect(self.screen, 
+        (255,255,255), 
+        (topleft[0],topleft[1],world_size*self.zoom,world_size*self.zoom), 
+        width=10)
 
   def show_fps(self):
     fps = round(clock.get_fps(),1)
-    print(fps) #debug colab
+    print(f"FPS: {fps}") #debug colab, remove later
 
-    fps_surf = self.font.render(f"FPS: {fps}",True, (255, 255, 255))
+    fps_surf = self.font.render(f"FPS: {fps}",True,(255, 255, 255))
     self.screen.blit(fps_surf, (10,10))
+  
+  def show_amount_of_bodies(self,sim):
+    amount_of_bodies = len(sim.positions)
+    amount_surf = self.font.render(f"Bodies: {amount_of_bodies}",True,(255,255,255))
+    self.screen.blit(amount_surf,(10,40))
+    print(f"Bodies: {amount_of_bodies}") #colab debug, remove later
 
   def draw_to_screen(self):
     self.screen.fill((0,0,0)) #screen reset
@@ -471,6 +490,7 @@ class Renderer():
     self.draw_world_border()
 
     self.show_fps()
+    self.show_amount_of_bodies(sim)
 
 sim = Simulation()
 sim.presets(1) #colab debug setup (no visual feedback) :(
