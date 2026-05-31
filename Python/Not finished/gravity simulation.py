@@ -249,6 +249,7 @@ class Simulation():
     self.masses = np.delete(self.masses,body_index,axis=0)
     self.radii = np.delete(self.radii,body_index,axis=0)
     del self.trails[body_index]
+    self.cooldowns = np.delete(self.cooldowns,body_index,axis=0)
 
   def collision_velocity_correcting(self,i,j,normal):
     relative_velocity = self.velocities[j] - self.velocities[i]
@@ -359,10 +360,9 @@ class Simulation():
 
         self.add_body(pos,vel,mass)
     elif preset == 3:
-      self.body_reset()
+      self.presets(2)
       self.add_body((world_size/2,world_size/2 + 300),(-10,0),20000)
       self.add_body((world_size/2,world_size/2 - 300),(10,0),20000)
-      self.presets(2)
 
   def physics_update(self):
     self.old_positions = self.positions.copy() #needed for velocity update later on
