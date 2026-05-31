@@ -179,6 +179,7 @@ class Simulation():
     self.masses = np.empty(0, dtype=np.float64)
     self.radii = np.empty(0, dtype=np.float64)
     self.trails = []
+    self.cooldowns = np.empty(0, dtype=np.float64)
 
   def add_body(self, pos, vel, mass):
     pos = np.array(pos, dtype=np.float64)
@@ -191,6 +192,7 @@ class Simulation():
     self.masses = np.append(self.masses, mass)
     self.radii = np.append(self.radii, (math.sqrt(mass / math.pi) / 6)) #radius in relation to mass, change the number at the end to change size
     self.accelerations = np.vstack([self.accelerations, np.zeros(2)])
+    self.cooldowns = np.append(self.cooldowns,0)
     self.trails.append(deque(maxlen=200))
 
   def body_reset(self):
@@ -201,6 +203,7 @@ class Simulation():
     self.masses = np.empty(0, dtype=np.float64)
     self.radii = np.empty(0, dtype=np.float64)
     self.trails = []
+    self.cooldowns = np.empty(0, dtype=np.float64)
 
   def calculate_acceleration(self):
     self.accelerations[:] = 0 #prevent accumulating accelerations - obvious reasons
@@ -221,7 +224,7 @@ class Simulation():
 
   def impact_breaking(self,body_index):
     impact_pos = self.positions[body_index].copy()
-    fragment_count = random.randint(3,10)
+    fragment_count = random.randint(2,5)
     weights = np.random.uniform(0.5, 1.5, fragment_count) #maintain the original mass
     weights /= weights.sum()
     fragment_masses = weights * self.masses[body_index]
@@ -236,6 +239,7 @@ class Simulation():
       spawn_vel = self.velocities[body_index] + np.array([random.uniform(-1,1),random.uniform(-1,1)])
 
       self.add_body(spawn_pos,spawn_vel,fragment_masses[i])
+      self.cooldowns[-1] = 200
 
     #deleting the body
     self.positions = np.delete(self.positions,body_index,axis=0)
@@ -300,16 +304,19 @@ class Simulation():
 
         if dist_sq < min_dist**2: #overlap
           normal = offset / dist
-          relative_velocity_normal = np.dot(self.velocities[j] - self.velocities[i],normal)#body breaking detection
-          if relative_velocity_normal > 30:
+          #relative_velocity_normal = np.dot(self.velocities[j] - self.velocities[i],normal)#body breaking detection
+          relative_velocity_normal = np.linalg.norm(self.velocities[j] - self.velocities[i])
+          if relative_velocity_normal > 35:
             mass_difference = abs(self.masses[j] - self.masses[i])
-            if mass_difference < 3000:
-              self.bodies_to_break.add(i)
-              self.bodies_to_break.add(j)
-            elif mass_difference >= 3000:
-              if self.masses[j] < self.masses[i]:
+            if mass_difference < 3000 and self.masses[i] >= 1000 and self.masses[j] >= 2000:
+              if self.cooldowns[i] <= 0: 
+                self.bodies_to_break.add(i)
+              if self.cooldowns[j] <= 0: 
                 self.bodies_to_break.add(j)
-              else:
+            elif mass_difference >= 3000:
+              if self.masses[j] < self.masses[i] and self.cooldowns[j] <= 0 and self.masses[j] >= 2000:
+                self.bodies_to_break.add(j)
+              elif self.cooldowns[i] <= 0 and self.masses[i] >= 2000:
                 self.bodies_to_break.add(i)
 
           penetration = min_dist - dist
@@ -324,6 +331,7 @@ class Simulation():
           #velocity correcting
           self.collision_velocity_correcting(i,j,normal)
 
+  def check_block_breaking(self):
     for index in sorted(set(self.bodies_to_break), reverse=True):
       self.impact_breaking(index)
     self.bodies_to_break.clear()
@@ -336,8 +344,8 @@ class Simulation():
   def presets(self,preset): #presets to choose from
     if preset == 1:
       self.body_reset()
-      self.add_body((world_size/2, world_size/2 + 300), (-10, 0), 20000)
-      self.add_body((world_size/2, world_size/2 - 300), (10,0), 20000)
+      self.add_body((world_size/2, world_size/2 + 300), (0,-20), 20000)
+      self.add_body((world_size/2, world_size/2 - 300), (0,20), 20000)
     elif preset == 2:
       self.body_reset()
       center = np.array([world_size/2,world_size/2])
@@ -366,9 +374,11 @@ class Simulation():
 
     for _ in range(4): #several solves for stability
       self.solve_collision()
+    self.check_block_breaking()
 
     #self.update_trails() #eeeeexpensive, not needed at first
     self.framecount += 1
+    self.cooldowns[:] -= 1
 
 class Renderer():
   def __init__(self, screen):
@@ -480,6 +490,15 @@ class Renderer():
     amount_surf = self.font.render(f"Bodies: {amount_of_bodies}",True,(255,255,255))
     self.screen.blit(amount_surf,(10,40))
     print(f"Bodies: {amount_of_bodies}") #colab debug, remove later
+  
+  def show_zoom(self):
+    zoom_surf = self.font.render(f"Zoom: {self.zoom}",True,(255,255,255))
+    self.screen.blit(zoom_surf,(10,70))
+
+  def show_technical_info(self):
+    self.show_fps()
+    self.show_amount_of_bodies(sim)
+    self.show_zoom()
 
   def draw_to_screen(self):
     self.screen.fill((0,0,0)) #screen reset
@@ -489,8 +508,7 @@ class Renderer():
     self.draw_bodies(sim)
     self.draw_world_border()
 
-    self.show_fps()
-    self.show_amount_of_bodies(sim)
+    self.show_technical_info()
 
 sim = Simulation()
 sim.presets(1) #colab debug setup (no visual feedback) :(
