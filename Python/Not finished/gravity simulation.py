@@ -171,6 +171,7 @@ class Simulation():
     self.G = 10
     self.dt = 1/240
     self.framecount = 0
+    self.bodies_to_break = set() #can't break the same body twice
     self.positions = np.empty((0,2), dtype=np.float64)
     self.old_positions = np.empty((0,2), dtype=np.float64)
     self.accelerations = np.empty((0,2), dtype=np.float64)
@@ -217,8 +218,49 @@ class Simulation():
 
   def update_velocities(self, old_accelerations): #new velocities
     self.velocities += (0.5 * (old_accelerations + self.accelerations) * self.dt)
+  
+  def impact_breaking(self,body_index):
+    impact_pos = self.positions[body_index].copy()
+    fragment_count = random.randint(3,10)
+    weights = np.random.uniform(0.5, 1.5, fragment_count) #maintain the original mass
+    weights /= weights.sum()
+    fragment_masses = weights * self.masses[body_index]
+    for i in range(fragment_count):
+      angle = (2*np.pi*i)/fragment_count #uniform distribution
+      angle += random.uniform(-0.2,0.2)
+      offset = np.array([
+          np.cos(angle), 
+          np.sin(angle)])
+      fragment_radius = math.sqrt(fragment_masses[i] / math.pi) / 6
+      spawn_pos = (impact_pos + offset * (self.radii[body_index] + fragment_radius)) #spawning the bodies outside of the parent body
+      spawn_vel = self.velocities[body_index] + np.array([random.uniform(-1,1),random.uniform(-1,1)])
 
-  def solve_collision(self): #still not optimised
+      self.add_body(spawn_pos,spawn_vel,fragment_masses[i])
+
+    #deleting the body
+    self.positions = np.delete(self.positions,body_index,axis=0)
+    self.old_positions = np.delete(self.old_positions,body_index,axis=0)
+    self.velocities = np.delete(self.velocities,body_index,axis=0) 
+    self.accelerations = np.delete(self.accelerations,body_index,axis=0) 
+    self.masses = np.delete(self.masses,body_index,axis=0) 
+    self.radii = np.delete(self.radii,body_index,axis=0) 
+    del self.trails[body_index]
+  
+  def collision_velocity_correcting(self,i,j,normal):
+    relative_velocity = self.velocities[j] - self.velocities[i]
+    velocity_along_normal = np.dot(relative_velocity, normal)
+    if velocity_along_normal > 0: #bodys are already moving apart
+      return
+    bounciness = 0.3 #1 = perfectly elastic, 0 = opposite
+    impulse = -(1 + bounciness) * velocity_along_normal
+    impulse /= (1 / self.masses[i] + 1 / self.masses[j])
+    impulse_vector = impulse * normal
+    
+    #velocity correcting
+    self.velocities[i] -= impulse_vector / self.masses[i]
+    self.velocities[j] += impulse_vector / self.masses[j]
+
+  def solve_collision(self): #still not completely optimised
     objects_len = len(self.positions)
     checked = set() #keine duplikate
 
@@ -245,19 +287,32 @@ class Simulation():
         pair = (i,j)
         if pair in checked:
           continue
-        checked.add(pair)
-
+        
         offset = self.positions[j] - self.positions[i]
         dist_sq = np.dot(offset,offset)
+        dist = np.sqrt(dist_sq)
         min_dist = self.radii[j] + self.radii[i]
 
-        if dist_sq == 0: #exploding
+        if dist_sq == 0: #prevent exploding
           continue
 
+        checked.add(pair)
+
         if dist_sq < min_dist**2: #overlap
-          dist = np.sqrt(dist_sq)
-          penetration = min_dist - dist
           normal = offset / dist
+          relative_velocity_normal = np.dot(self.velocities[j] - self.velocities[i],normal)#body breaking detection
+          if relative_velocity_normal > 30:
+            mass_difference = abs(self.masses[j] - self.masses[i])
+            if mass_difference < 3000:
+              self.bodies_to_break.add(i)
+              self.bodies_to_break.add(j)
+            elif mass_difference >= 3000:
+              if self.masses[j] < self.masses[i]:
+                self.bodies_to_break.add(j)
+              else:
+                self.bodies_to_break.add(i)
+
+          penetration = min_dist - dist
           total_mass = self.masses[i] + self.masses[j]
 
           correction_i = (normal * penetration * (self.masses[j] / total_mass))
@@ -267,21 +322,11 @@ class Simulation():
           self.positions[j] += correction_j
 
           #velocity correcting
-          relative_velocity = self.velocities[j] - self.velocities[i]
-          velocity_along_normal = np.dot(relative_velocity,normal)
+          self.collision_velocity_correcting(i,j,normal)
 
-          if velocity_along_normal > 0: #bodys are already moving apart
-            continue
-          
-          bounciness = 0.3 #1 = perfectly elastic, 0 = opposite
-          impulse = -(1 + bounciness) * velocity_along_normal
-          impulse /= (1 / self.masses[i] + 1 / self.masses[j])
-
-          impulse_vector = impulse * normal
-
-          #velocity correcting
-          self.velocities[i] -= impulse_vector / self.masses[i]
-          self.velocities[j] += impulse_vector / self.masses[j] 
+    for index in sorted(set(self.bodies_to_break), reverse=True):
+      self.impact_breaking(index)
+    self.bodies_to_break.clear()
 
   def update_trails(self):
     if self.framecount % 3 == 0: #save computing power, it doesn't ned a point every frame
