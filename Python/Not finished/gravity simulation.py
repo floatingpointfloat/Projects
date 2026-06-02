@@ -1,6 +1,6 @@
 #my try at verlet integration for a numerically stable n-body simulation of gravitation
 # quadtree and barnes hut
-# world - camera separated -> zoom, moving, 1000000**2 world
+# world - camera separated -> zoom, moving
 # (relatively) stable gravitation and collision
 # spawning and manipulation of objects
 import pygame
@@ -10,17 +10,53 @@ from collections import deque
 import math
 import random
 import time
+from numba import njit
 
 #variables
 WIDTH, HEIGHT = 700, 700
-world_size = 1000000
-accuracy = 0.5
+world_size = 5000
+accuracy = 1.2
 
 #setup
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Gravity sim")
 clock = pygame.time.Clock()
+
+@njit(fastmath=True, cache=True)
+def leaf_acceleration(
+    positions,
+    masses,
+    body_indices,
+    body_index,
+    px,
+    py,
+    G,
+    ax,
+    ay
+):
+    EPS = 2.0
+
+    for k in range(len(body_indices)):
+        other_index = body_indices[k]
+
+        if other_index == body_index:
+            continue
+
+        dx = positions[other_index, 0] - px
+        dy = positions[other_index, 1] - py
+
+        dist_sq = dx*dx + dy*dy + EPS*EPS
+
+        inv_dist = 1.0 / math.sqrt(dist_sq)
+        inv_dist3 = inv_dist * inv_dist * inv_dist
+
+        factor = G * masses[other_index] * inv_dist3
+
+        ax += dx * factor
+        ay += dy * factor
+
+    return ax, ay
 
 class Quadnodes():
   def __init__(self, x, y, size):
@@ -66,7 +102,7 @@ class Quadnodes():
   def subdivide(self):
     h = self.size / 2
 
-    self.tree_drawing(h,renderer) #debug purposes, comment out if it works fine
+    #self.tree_drawing(h,renderer) #debug purposes, comment out if it works fine
 
     self.children = [
         Quadnodes(self.x,self.y,h),
@@ -112,23 +148,37 @@ class Quadnodes():
   def compute_acceleration(self,sim,body_index,accuracy=0.5): #accuracy = theta, controls the threshhold of grouping
     EPS = 2
     pos = sim.positions[body_index]
+    sim.nodevisits += 1
     if self.mass == 0: #doesn't make sense to compute
       return
 
     if self.children is None:
-      for other_index in self.body_indices: #mehrere körper pro zelle, bei kleinen zellen
-        if other_index == body_index:
-          continue
-        offset = sim.positions[other_index] - pos
-        dist_sq = np.dot(offset, offset) + EPS * EPS
-        dist = np.sqrt(dist_sq)
-        inv_dist3 = 1 / (dist_sq * dist)
-        sim.accelerations[body_index] += (offset * sim.G * sim.masses[other_index] * inv_dist3)
+      #mehrere körper pro zelle, bei kleinen zellen
+      px = pos[0]
+      py = pos[1]
+      
+      ax = sim.accelerations[body_index, 0]
+      ay = sim.accelerations[body_index, 1]
+      
+      body_indices = np.asarray(
+          self.body_indices,
+          dtype=np.int64
+          )
+      
+      ax, ay = leaf_acceleration(sim.positions,sim.masses,body_indices,body_index,px,py,sim.G,ax,ay)
+      sim.accelerations[body_index, 0] = ax
+      sim.accelerations[body_index, 1] = ay
       return
 
     offset = self.com - pos
 
-    dist_sq = np.dot(offset, offset) + EPS * EPS
+    dx = offset[0] #python effizienter
+    dy = offset[1]
+    dist_sq = dx*dx + dy*dy + EPS * EPS
+
+    if dist_sq < 1e-12:
+      return
+
     dist = np.sqrt(dist_sq)
 
     if (self.size / dist < accuracy): #barnes hut threshold makes grouping possible
@@ -169,7 +219,7 @@ class Quadtree(): #"wrapperclass"
 class Simulation():
   def __init__(self):
     self.G = 10
-    self.dt = 1/240
+    self.dt = 1/120
     self.framecount = 0
     self.bodies_to_break = set() #can't break the same body twice
     self.positions = np.empty((0,2), dtype=np.float64)
@@ -180,6 +230,8 @@ class Simulation():
     self.radii = np.empty(0, dtype=np.float64)
     self.trails = []
     self.cooldowns = np.empty(0, dtype=np.float64)
+    self.tree = Quadtree()
+    self.nodevisits = 0
 
   def add_body(self, pos, vel, mass):
     pos = np.array(pos, dtype=np.float64)
@@ -205,16 +257,16 @@ class Simulation():
     self.trails = []
     self.cooldowns = np.empty(0, dtype=np.float64)
 
-  def calculate_acceleration(self):
+  def calculate_acceleration(self): #this needs extremely much power to compute, tree needs to be fixed
     self.accelerations[:] = 0 #prevent accumulating accelerations - obvious reasons
-    tree = Quadtree()
     objects_len = len(self.positions)
+    self.tree = Quadtree()
 
     for i in range(objects_len):
-      tree.insert(self,i)
+      self.tree.insert(self,i)
 
     for i in range(objects_len):
-      tree.compute_acceleration(self,i,accuracy)
+      self.tree.compute_acceleration(self,i,accuracy)
 
   def update_positions(self): #velocity verlet integration
     self.positions += (self.velocities * self.dt + 0.5 * self.accelerations * self.dt**2)
@@ -251,35 +303,31 @@ class Simulation():
     del self.trails[body_index]
     self.cooldowns = np.delete(self.cooldowns,body_index,axis=0)
 
-  def collision_velocity_correcting(self,i,j,normal):
+  def collision_velocity_correcting(self,i,mass_i,j,mass_j,normal):
     relative_velocity = self.velocities[j] - self.velocities[i]
     velocity_along_normal = np.dot(relative_velocity, normal)
     if velocity_along_normal > 0: #bodys are already moving apart
       return
     bounciness = 0.3 #1 = perfectly elastic, 0 = opposite
     impulse = -(1 + bounciness) * velocity_along_normal
-    impulse /= (1 / self.masses[i] + 1 / self.masses[j])
+    impulse /= (1 / mass_i + 1 / mass_j)
     impulse_vector = impulse * normal
 
     #velocity correcting
-    self.velocities[i] -= impulse_vector / self.masses[i]
-    self.velocities[j] += impulse_vector / self.masses[j]
+    self.velocities[i] -= impulse_vector / mass_i
+    self.velocities[j] += impulse_vector / mass_j
 
   def solve_collision(self): #still not completely optimised
     objects_len = len(self.positions)
     checked = set() #keine duplikate
-
-    tree = Quadtree()
-
-    for i in range(objects_len):
-      tree.insert(self,i)
+    max_radius = np.max(self.radii)
 
     for i in range(objects_len):
       found = []
       r = self.radii[i]
-      search_radius =r + np.max(self.radii)
+      search_radius = r + max_radius
 
-      tree.root.collision_partners(
+      self.tree.root.collision_partners(
           self.positions[i][0] - search_radius,
           self.positions[i][1] - search_radius,
           search_radius * 2,
@@ -294,7 +342,11 @@ class Simulation():
           continue
 
         offset = self.positions[j] - self.positions[i]
-        dist_sq = np.dot(offset,offset)
+
+        dx = offset[0]
+        dy = offset[1]
+        dist_sq = dx*dx + dy*dy
+
         dist = np.sqrt(dist_sq)
         min_dist = self.radii[j] + self.radii[i]
 
@@ -305,14 +357,14 @@ class Simulation():
 
         if dist_sq < min_dist**2: #overlap
           normal = offset / dist
-          #relative_velocity_normal = np.dot(self.velocities[j] - self.velocities[i],normal)#body breaking detection
-          relative_velocity_normal = np.linalg.norm(self.velocities[j] - self.velocities[i])
+          relative_velocity = self.velocities[j] - self.velocities[i]
+          relative_velocity_normal = np.dot(relative_velocity,normal)
           if relative_velocity_normal > 35:
             mass_difference = abs(self.masses[j] - self.masses[i])
             if mass_difference < 3000 and self.masses[i] >= 1000 and self.masses[j] >= 2000:
-              if self.cooldowns[i] <= 0: 
+              if self.cooldowns[i] <= 0:
                 self.bodies_to_break.add(i)
-              if self.cooldowns[j] <= 0: 
+              if self.cooldowns[j] <= 0:
                 self.bodies_to_break.add(j)
             elif mass_difference >= 3000:
               if self.masses[j] < self.masses[i] and self.cooldowns[j] <= 0 and self.masses[j] >= 2000:
@@ -321,16 +373,18 @@ class Simulation():
                 self.bodies_to_break.add(i)
 
           penetration = min_dist - dist
-          total_mass = self.masses[i] + self.masses[j]
+          mass_i = self.masses[i].copy()
+          mass_j = self.masses[j].copy()
+          total_mass = mass_i + mass_j
 
-          correction_i = (normal * penetration * (self.masses[j] / total_mass))
-          correction_j = (normal * penetration * (self.masses[i] / total_mass))
+          correction_i = (normal * penetration * (mass_j / total_mass))
+          correction_j = (normal * penetration * (mass_i / total_mass))
 
           self.positions[i] -= correction_i
           self.positions[j] += correction_j
 
           #velocity correcting
-          self.collision_velocity_correcting(i,j,normal)
+          self.collision_velocity_correcting(i,mass_i,j,mass_j,normal)
 
   def check_block_breaking(self):
     for index in sorted(set(self.bodies_to_break), reverse=True):
@@ -350,7 +404,7 @@ class Simulation():
     elif preset == 2:
       self.body_reset()
       center = np.array([world_size/2,world_size/2])
-      for _ in range(40):
+      for _ in range(25):
         r = abs(random.gauss(80, 60))
         rotation = random.uniform(0, 2*np.pi)
 
@@ -363,18 +417,31 @@ class Simulation():
       self.presets(2)
       self.add_body((world_size/2,world_size/2 + 300),(-10,0),20000)
       self.add_body((world_size/2,world_size/2 - 300),(10,0),20000)
+    elif preset == 4:
+      for i in range(int(WIDTH/20)):
+        for j in range(int(HEIGHT/20)):
+          sim.add_body((30*i,30*j),(0,0),100)
 
   def physics_update(self):
+    self.nodevisits = 0
     self.old_positions = self.positions.copy() #needed for velocity update later on
     old_accelerations = self.accelerations.copy()
 
     self.update_positions()
+
+    start = time.perf_counter()
     self.calculate_acceleration()
+    print("acceleration: ",(time.perf_counter() - start)*1000,"ms")
+
     self.update_velocities(old_accelerations)
 
+    start = time.perf_counter()
     for _ in range(4): #several solves for stability
       self.solve_collision()
     self.check_block_breaking()
+    print("collision: ", (time.perf_counter() - start) * 1000, "ms")
+
+    print(self.nodevisits)
 
     #self.update_trails() #eeeeexpensive, not needed at first
     self.framecount += 1
@@ -389,11 +456,17 @@ class Renderer():
     self.dragging = False
     self.font = pygame.font.SysFont("Arial",15)
 
-  def screen_to_world(self, screen_pos): #changing screen coordinates into world coordinates and taking zooming into account
-    return ((np.array(screen_pos) - np.array([WIDTH/2, HEIGHT/2])) / self.zoom + self.camera_pos)
+  def screen_to_world(self, screen_pos):
+    return(
+        (screen_pos[0] - WIDTH * 0.5) / self.zoom + self.camera_pos[0],
+        (screen_pos[1] - HEIGHT * 0.5) / self.zoom + self.camera_pos[1]
+    )
 
-  def world_to_screen(self, world_pos): #world coordinates to screen coordinates
-    return ((world_pos - self.camera_pos) * self.zoom + np.array([WIDTH/2, HEIGHT/2]))
+  def world_to_screen(self, world_pos):
+    return (
+        (world_pos[0] - self.camera_pos[0]) * self.zoom + WIDTH * 0.5,
+        (world_pos[1] - self.camera_pos[1]) * self.zoom + HEIGHT * 0.5
+    )
 
   def camera_reset(self):
     self.zoom = 1
@@ -473,9 +546,9 @@ class Renderer():
   def draw_world_border(self):
     topleft = self.world_to_screen((0,0))
 
-    pygame.draw.rect(self.screen, 
-        (255,255,255), 
-        (topleft[0],topleft[1],world_size*self.zoom,world_size*self.zoom), 
+    pygame.draw.rect(self.screen,
+        (255,255,255),
+        (topleft[0],topleft[1],world_size*self.zoom,world_size*self.zoom),
         width=10)
 
   def show_fps(self):
@@ -484,13 +557,13 @@ class Renderer():
 
     fps_surf = self.font.render(f"FPS: {fps}",True,(255, 255, 255))
     self.screen.blit(fps_surf, (10,10))
-  
+
   def show_amount_of_bodies(self,sim):
     amount_of_bodies = len(sim.positions)
     amount_surf = self.font.render(f"Bodies: {amount_of_bodies}",True,(255,255,255))
     self.screen.blit(amount_surf,(10,40))
     print(f"Bodies: {amount_of_bodies}") #colab debug, remove later
-  
+
   def show_zoom(self):
     zoom_surf = self.font.render(f"Zoom: {self.zoom}",True,(255,255,255))
     self.screen.blit(zoom_surf,(10,70))
@@ -518,9 +591,9 @@ renderer = Renderer(screen)
 if __name__ == '__main__':
   while True:
     renderer.input_handling(sim)
-    for _ in range(4): #substeps (sim.dt has to be 4 times higher to compensate and enable true substepping)
+    for _ in range(2): #substeps (sim.dt has to be 4 times higher to compensate and enable true substepping)
       sim.physics_update()
     renderer.draw_to_screen()
 
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(120)
