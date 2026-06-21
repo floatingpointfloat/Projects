@@ -39,9 +39,9 @@ class QuadNodes:
         new_depth = self.depth + 1
         
         self.nw = QuadNodes(self.x, self.y, half_width, half_height, new_depth)
-        self.ne = QuadNodes(self.mid_x + half_width, self.y, half_width, half_height, new_depth)
-        self.sw = QuadNodes(self.x, self.mid_y + half_height, half_width, half_height, new_depth)
-        self.se = QuadNodes(self.mid_x + half_width, self.mid_y + half_height, half_width, half_height, new_depth)
+        self.ne = QuadNodes(self.mid_x, self.y, half_width, half_height, new_depth)
+        self.sw = QuadNodes(self.x, self.mid_y, half_width, half_height, new_depth)
+        self.se = QuadNodes(self.mid_x, self.mid_y, half_width, half_height, new_depth)
 
     def intersects(self, x, y): #does the point lie within the bounds of this node?
         return (self.x <= x < self.x + self.width and self.y <= y < self.y + self.height)
