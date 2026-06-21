@@ -124,10 +124,3 @@ class QuadTree:
     
     def clear(self):
         self.root.clear()
-        
-quadtree = QuadTree(0, 0, 100, 100) #example usage - create a quadtree that covers the area from (0, 0) to (100, 100)
-quadtree.insert(10, 10) #insert a point at (10, 10)
-quadtree.insert(20, 20) #insert a point at (20, 20)
-quadtree.insert(30, 30) #insert a point at (
-    
-print("hallo")
