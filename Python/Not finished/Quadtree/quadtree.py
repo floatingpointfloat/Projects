@@ -53,7 +53,7 @@ class QuadNodes:
         dist_x = x - closest_x
         dist_y = y - closest_y
         
-        return dist_x ** 2 + dist_y ** 2 <= radius ** 2
+        return dist_x * dist_x + dist_y * dist_y <= radius * radius
     
     def insert_to_children(self, x, y): #try to insert the point into the children - return True if successful, False if not
         if x < self.mid_x: #point is in the left half
