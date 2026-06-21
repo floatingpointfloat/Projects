@@ -104,10 +104,12 @@ class QuadNodes:
     def clear(self): #clear the quadtree - maybe for resetting or something
         self.points.clear()
         
-        self.nw = None
-        self.ne = None 
-        self.sw = None
-        self.se = None
+        if self.nw:
+            self.nw.clear()
+            self.ne.clear()
+            self.sw.clear()
+            self.se.clear()
+            self.nw = self.ne = self.sw = self.se = None
         
 #wrapperclass
 class QuadTree:
