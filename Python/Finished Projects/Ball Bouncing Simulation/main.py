@@ -1,7 +1,6 @@
 from sys import exit
 import pygame
 from pygame import Vector2
-import math
 import random
 
 pygame.init()
@@ -12,14 +11,16 @@ clock = pygame.time.Clock()
 #variables
 boundary = pygame.draw.circle(screen, (255, 255, 255), (500, 500), 500)
 G = Vector2(0, 1000)  # Gravitational constant for the simulation
+spawning_mass = 10
 
 class Ball:
-    def __init__(self, position, velocity, radius, color):
+    def __init__(self, position, velocity, radius, color, mass):
         self.position = Vector2(position)
         self.velocity = Vector2(velocity)
         self.acceleration = Vector2(0, 0)
         self.radius = radius
         self.color = color
+        self.mass = mass
 
     def update(self):
         self.acceleration = G
@@ -52,26 +53,30 @@ class Ball:
             impulse = impulse_scalar * normal
             self.velocity += impulse / self.radius
             other.velocity -= impulse / other.radius
+            
+            penetration = self.radius + other.radius - distance.length()
+            self.position += normal * (
+                penetration * (other.mass / (self.mass + other.mass))
+            )
+            other.position -= normal * (
+                penetration * (self.mass / (self.mass + other.mass))
+            )
 
 obj = []
 while True:
     dt = clock.tick(60) / 1000  # Time in seconds since last frame
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
+        if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
             print(len(obj))
             pygame.quit()
             exit()
         if event.type == pygame.MOUSEBUTTONDOWN:
             pos = Vector2(pygame.mouse.get_pos())
-            for i in range(10):
-                if i % 2 == 0:
-                    obj.append(Ball(pos + Vector2(i*30, 0), (random.uniform(-200, 200), random.uniform(-200, 200)), 3, (random.randint(10, 255), random.randint(10, 255), random.randint(10, 255))))
-                else:
-                    obj.append(Ball(pos + Vector2(-i*30, 0), (random.uniform(-200, 200), random.uniform(-200, 200)), 3, (random.randint(10, 255), random.randint(10, 255), random.randint(10, 255))))
-            #obj.append(Ball(pos, (0,0), 10, (random.randint(10, 255), random.randint(10, 255), random.randint(10, 255))))
+            obj.append(Ball(pos, (0,0), 10, (random.randint(10, 255), random.randint(10, 255), random.randint(10, 255)), spawning_mass))
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 obj.clear()
+        
     
     screen.fill((0, 0, 0))
     pygame.draw.circle(screen, (255, 255, 255), (500, 500), 500)
@@ -79,9 +84,12 @@ while True:
         ball.update()
         pygame.draw.circle(screen, ball.color, (int(ball.position.x), int(ball.position.y)), ball.radius)
     
-    for i in range(len(obj)):
-        for j in range(i + 1, len(obj)):
-            if obj[i].position.distance_to(obj[j].position) <= obj[i].radius + obj[j].radius:
-                obj[i].collision(obj[j])
+    for _ in range(3):
+        for i in range(len(obj)):
+            for j in range(i + 1, len(obj)):
+                if obj[i].position.distance_to(obj[j].position) <= obj[i].radius + obj[j].radius:
+                    obj[i].collision(obj[j])
         
     pygame.display.update()
+    fps = clock.get_fps()
+    pygame.display.set_caption(f"Bouncing Ball Simulation | Bodies: {len(obj)} | FPS: {round(fps, 1)}")
