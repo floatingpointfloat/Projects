@@ -14,6 +14,13 @@ G = Vector2(0, 1000)  # Gravitational constant for the simulation
 spawning_mass = 10
 
 class Ball:
+    __slots__ = ['position',
+    'velocity',
+    'acceleration',
+    'radius',
+    'color',
+    'mass']
+    
     def __init__(self, position, velocity, radius, color, mass):
         self.position = Vector2(position)
         self.velocity = Vector2(velocity)
