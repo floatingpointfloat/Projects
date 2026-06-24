@@ -1,5 +1,4 @@
 import pygame
-import time
 from sys import exit
 import random
 
@@ -35,6 +34,11 @@ if __name__ == '__main__':
             ):
                 pygame.quit()
                 exit()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                new_slot = True
+                required_input = None
+                counter = -1
+                start_time = pygame.time.get_ticks()
             if required_input is not None:
                 if event.type == pygame.KEYDOWN:
                     input = event.key
