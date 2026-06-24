@@ -52,7 +52,12 @@ if __name__ == '__main__':
         if running:
             if new_slot:
                 random_slot =  random.randint(0,8)
+                old_required_input = required_input
                 required_input = hotkeys.get(f"{random_slot + 1}") #gotta change the name here to change the dictionary - and obviusly the entire thing above
+                if old_required_input == required_input:
+                    color = (0, 255, 0)
+                else:
+                    color = (255, 0, 0)
                 new_slot = False
                 counter += 1
             
@@ -60,7 +65,7 @@ if __name__ == '__main__':
                 if not i == random_slot:  
                     pygame.draw.rect(screen, (255, 255, 255), (i*WIDTH + 5, 5, WIDTH, HEIGHT), width=2)
                 else:
-                    pygame.draw.rect(screen, (255, 0, 0), (i*WIDTH + 5, 5, WIDTH, HEIGHT), width=5)
+                    pygame.draw.rect(screen, color, (i*WIDTH + 5, 5, WIDTH, HEIGHT), width=5)
                         
         pygame.display.update()
         current_time = pygame.time.get_ticks()
