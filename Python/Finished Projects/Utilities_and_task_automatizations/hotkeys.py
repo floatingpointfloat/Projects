@@ -46,11 +46,8 @@ hotkeys_finn = {
     '9': 2
 }
 
-def reset(new_slot, required_input, counter):
-    new_slot = True
-    required_input = None
-    counter = -1
-    start_time = pygame.time.get_ticks()
+def reset():
+    return True, None, -1, pygame.time.get_ticks()
 
 if __name__ == '__main__':
     running = True
@@ -70,19 +67,19 @@ if __name__ == '__main__':
                 exit()
             if event.type == pygame.KEYDOWN: 
                 if event.key == pygame.K_SPACE:
-                    reset(new_slot, required_input, counter)
+                    new_slot, required_input, counter, start_time = reset()
                 elif event.key == pygame.K_KP1:
-                    kotkeys = hotkeys_ryan.copy()
+                    hotkeys = hotkeys_ryan.copy()
                     user = 0
-                    reset(new_slot, required_input, counter)
+                    new_slot, required_input, counter, start_time = reset()
                 elif event.key == pygame.K_KP2:
                     hotkeys = hotkeys_max.copy()
                     user = 1
-                    reset(new_slot, required_input, counter)
+                    new_slot, required_input, counter, start_time = reset()
                 elif event.key == pygame.K_KP3:
                     hotkeys = hotkeys_finn.copy()
                     user = 2
-                    reset(new_slot, required_input, counter)
+                    new_slot, required_input, counter, start_time = reset()
             if required_input is not None:
                 if event.type == pygame.KEYDOWN:
                     input = event.key
