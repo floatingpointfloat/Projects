@@ -8,7 +8,7 @@ start_time = pygame.time.get_ticks()
 WIDTH, HEIGHT = 50, 50
 screen = pygame.display.set_mode((WIDTH * 9 + 10, HEIGHT + 10))
 
-hotkeys = {
+hotkeys_ryan = {
     '1': pygame.K_1, 
     '2': pygame.K_q, 
     '3': pygame.K_CAPSLOCK, 
@@ -20,11 +20,42 @@ hotkeys = {
     '9': 2
 }
 
+hotkeys_max = {
+    '1': pygame.K_1, 
+    '2': pygame.K_2, 
+    '3': pygame.K_3, 
+    '4': pygame.K_4, 
+    '5': pygame.K_e, 
+    '6': pygame.K_f, 
+    '7': pygame.K_LESS, 
+    '8': pygame.K_c,
+    '9': 2
+}
+
+hotkeys_finn = {
+    '1': pygame.K_1, 
+    '2': pygame.K_2, 
+    '3': pygame.K_3, 
+    '4': pygame.K_4, 
+    '5': pygame.K_r, 
+    '6': pygame.K_q, 
+    '7': pygame.K_c, 
+    '8': pygame.K_v,
+    '9': 2
+}
+
+def reset(new_slot, required_input, counter):
+    new_slot = True
+    required_input = None
+    counter = -1
+    start_time = pygame.time.get_ticks()
+
 if __name__ == '__main__':
     running = True
     new_slot = True
     required_input = None
     counter = -1
+    hotkeys = hotkeys_ryan.copy()
     while True:
         screen.fill((0, 0, 0))
         input = None
@@ -34,11 +65,18 @@ if __name__ == '__main__':
             ):
                 pygame.quit()
                 exit()
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                new_slot = True
-                required_input = None
-                counter = -1
-                start_time = pygame.time.get_ticks()
+            if event.type == pygame.KEYDOWN: 
+                if event.key == pygame.K_SPACE:
+                    reset(new_slot, required_input, counter)
+                elif event.key == pygame.K_KP1:
+                    kotkeys = hotkeys_ryan.copy()
+                    reset(new_slot, required_input, counter)
+                elif event.key == pygame.K_KP2:
+                    hotkeys = hotkeys_max.copy()
+                    reset(new_slot, required_input, counter)
+                elif event.key == pygame.K_KP3:
+                    hotkeys = hotkeys_finn.copy()
+                    reset(new_slot, required_input, counter)
             if required_input is not None:
                 if event.type == pygame.KEYDOWN:
                     input = event.key
