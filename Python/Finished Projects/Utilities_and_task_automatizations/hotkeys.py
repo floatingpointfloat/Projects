@@ -8,6 +8,8 @@ start_time = pygame.time.get_ticks()
 WIDTH, HEIGHT = 50, 50
 screen = pygame.display.set_mode((WIDTH * 9 + 10, HEIGHT + 10))
 
+users = ['Ryan', 'Max', 'Finn']
+
 hotkeys_ryan = {
     '1': pygame.K_1, 
     '2': pygame.K_q, 
@@ -56,6 +58,7 @@ if __name__ == '__main__':
     required_input = None
     counter = -1
     hotkeys = hotkeys_ryan.copy()
+    user = 0
     while True:
         screen.fill((0, 0, 0))
         input = None
@@ -70,12 +73,15 @@ if __name__ == '__main__':
                     reset(new_slot, required_input, counter)
                 elif event.key == pygame.K_KP1:
                     kotkeys = hotkeys_ryan.copy()
+                    user = 0
                     reset(new_slot, required_input, counter)
                 elif event.key == pygame.K_KP2:
                     hotkeys = hotkeys_max.copy()
+                    user = 1
                     reset(new_slot, required_input, counter)
                 elif event.key == pygame.K_KP3:
                     hotkeys = hotkeys_finn.copy()
+                    user = 2
                     reset(new_slot, required_input, counter)
             if required_input is not None:
                 if event.type == pygame.KEYDOWN:
@@ -109,6 +115,6 @@ if __name__ == '__main__':
         current_time = pygame.time.get_ticks()
         time_since_start = round((current_time - start_time) / 1000, 0)
         if counter != 0:
-            pygame.display.set_caption(f"Hotkeys | Correct: {counter} | {time_since_start}s | Average per hotkey: {round(time_since_start / counter, 1)}s")
+            pygame.display.set_caption(f"Hotkeys - {users[user]} | Correct: {counter} | {time_since_start}s | Average: {round(time_since_start / counter, 1)}s")
         else:
-            pygame.display.set_caption(f"Hotkeys | Correct: {counter} | {time_since_start}s")
+            pygame.display.set_caption(f"Hotkeys - {users[user]} | Correct: {counter} | {time_since_start}s")
