@@ -11,10 +11,10 @@ screen = pygame.display.set_mode((WIDTH * 9 + 10, HEIGHT + 10))
 users = ['Ryan', 'Max', 'Finn']
 
 hotkeys_ryan = {
-    '1': pygame.K_1, 
+    '1': pygame.K_o, 
     '2': pygame.K_q, 
-    '3': pygame.K_CAPSLOCK, 
-    '4': pygame.K_4, 
+    '3': pygame.K_4, 
+    '4': pygame.K_p, 
     '5': pygame.K_e, 
     '6': pygame.K_f, 
     '7': pygame.K_c, 
@@ -80,6 +80,7 @@ if __name__ == '__main__':
                     hotkeys = hotkeys_finn.copy()
                     user = 2
                     new_slot, required_input, counter, start_time = reset()
+                    
             if required_input is not None:
                 if event.type == pygame.KEYDOWN:
                     input = event.key
