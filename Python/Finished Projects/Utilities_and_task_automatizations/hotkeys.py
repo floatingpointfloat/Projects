@@ -2,6 +2,16 @@ import pygame
 from sys import exit
 import random
 
+user_manual = """User-Manual :) 
+Select the current user via F1, F2 and F3
+Press the correct hotkey to advance - if that is not possible, press BACKSPACE to skip
+If the same hotkey is chosen twice in a row, it will appear green on the screen
+If you wish to reset the program, simply press SPACE - changing the user also resets the program
+ESCAPE or pressing X (the window x) stops the program
+"""
+
+print(user_manual)
+
 #initializing
 pygame.init()
 start_time = pygame.time.get_ticks()
@@ -68,15 +78,15 @@ if __name__ == '__main__':
             if event.type == pygame.KEYDOWN: 
                 if event.key == pygame.K_SPACE:
                     new_slot, required_input, counter, start_time = reset()
-                elif event.key == pygame.K_KP1:
+                elif event.key == pygame.K_F1:
                     hotkeys = hotkeys_ryan.copy()
                     user = 0
                     new_slot, required_input, counter, start_time = reset()
-                elif event.key == pygame.K_KP2:
+                elif event.key == pygame.K_F2:
                     hotkeys = hotkeys_max.copy()
                     user = 1
                     new_slot, required_input, counter, start_time = reset()
-                elif event.key == pygame.K_KP3:
+                elif event.key == pygame.K_F3:
                     hotkeys = hotkeys_finn.copy()
                     user = 2
                     new_slot, required_input, counter, start_time = reset()
