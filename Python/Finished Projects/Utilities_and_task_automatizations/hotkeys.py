@@ -80,6 +80,9 @@ if __name__ == '__main__':
                     hotkeys = hotkeys_finn.copy()
                     user = 2
                     new_slot, required_input, counter, start_time = reset()
+                elif event.key == pygame.K_BACKSPACE:
+                    new_slot = True
+                    counter -= 1
                     
             if required_input is not None:
                 if event.type == pygame.KEYDOWN:
