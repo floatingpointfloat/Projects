@@ -7,7 +7,7 @@ from sys import exit
 WIDTH = 10
 HEIGHT = 20
 tiles = np.zeros((HEIGHT, WIDTH), dtype=int)
-pixels_per_tile = 50
+pixels_per_tile = 40
 screen_width = WIDTH * pixels_per_tile
 screen_height = HEIGHT * pixels_per_tile
 
@@ -194,13 +194,13 @@ if __name__ == "__main__":
                 pygame.quit()
                 exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
+                if event.key == pygame.K_a:
                     move_tetromino(current_tetromino, -1, 0)
-                elif event.key == pygame.K_RIGHT:
+                elif event.key == pygame.K_d:
                     move_tetromino(current_tetromino, 1, 0)
-                elif event.key == pygame.K_DOWN:
+                elif event.key == pygame.K_s:
                     move_tetromino(current_tetromino, 0, 1)
-                elif event.key == pygame.K_UP:
+                elif event.key == pygame.K_w:
                     rotate_tetromino(current_tetromino)
                 elif event.key == pygame.K_SPACE:
                     for i in range(HEIGHT):
