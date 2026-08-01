@@ -1,4 +1,4 @@
-from i_like_optimizations import QuadTree
+from class_quadtree import QuadTree
 import pygame
 import random
 import math
