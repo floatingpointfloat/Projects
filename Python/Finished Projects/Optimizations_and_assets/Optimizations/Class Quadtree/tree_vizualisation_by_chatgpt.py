@@ -4,7 +4,7 @@ import random
 import math
 
 pygame.init()
-WIDTH, HEIGHT = 1000, 1000
+WIDTH, HEIGHT = 600, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Quadtree Visualization - Moving Points")
 clock = pygame.time.Clock()
@@ -58,7 +58,7 @@ while running:
     # -------------------------
     quadtree.clear()
     for obj in objects:
-        quadtree.insert(obj[0], obj[1])
+        quadtree.insert(obj[0], obj[1], 0)
 
     # -------------------------
     # Rendering
@@ -83,7 +83,7 @@ while running:
     pygame.draw.circle(screen, (0, 150, 255), (mx, my), SEARCH_RADIUS, 1)
 
     # gefundene Punkte highlighten
-    for px, py in nearby:
+    for px, py, _ in nearby:
         pygame.draw.circle(screen, (0, 255, 0), (int(px), int(py)), 3)
 
     pygame.display.flip()
