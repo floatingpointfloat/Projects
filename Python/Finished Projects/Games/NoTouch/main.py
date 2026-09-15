@@ -30,9 +30,9 @@ class ball:
 
         self.speed_y += self.G * dt
 
-    def inputs(self, input):
+    def inputs(self, input, dt):
         if input == "SPACE":
-            self.speed_y = -20
+            self.speed_y -= 10 * dt
 
 start_color = random.choice(AVAIBLE_COLORS)
 ball = ball(WIDTH // 2, HEIGHT // 2, 5, start_color, 0, SPEED)
@@ -131,6 +131,9 @@ class simulation:
                 self.ball.color = random.choice(AVAIBLE_COLORS)
                 self.left_wall.reset(self.ball.color)
                 self.ball.speed_x *= -1
+        #in case the ball goes out of bounds vertically at a wall, reset the game
+        if (self.ball.y + self.ball.radius <= 0 or self.ball.y - self.ball.radius >= HEIGHT) and (self.ball.x - self.ball.radius <= WALL_WIDTH or self.ball.x + self.ball.radius >= WIDTH - WALL_WIDTH):
+            self.game_over = True
 
     def reset(self):
         self.score = 0
@@ -207,7 +210,7 @@ if __name__ == "__main__":
         if not sim.game_over:
             user_input = input_handler.handle_input()
             if user_input:
-                sim.ball.inputs(user_input)
+                sim.ball.inputs(user_input, sim.dt)
             sim.update()
             renderer.render()  
         else:
