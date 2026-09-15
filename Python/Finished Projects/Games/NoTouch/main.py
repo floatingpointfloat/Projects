@@ -112,7 +112,7 @@ class simulation:
         try:
             with open("highscore.txt", "r") as f:
                 self.high_score = int(f.read().strip())
-        except (FileNotFoundError, ValueError):
+        except FileNotFoundError:
             self.high_score = 0
             with open("highscore.txt", "w") as f:
                 f.write(str(self.high_score))
@@ -174,7 +174,7 @@ class simulation:
         try:
             with open("highscore.txt", "r") as f:
                 self.high_score = int(f.read().strip())
-        except (FileNotFoundError, ValueError):
+        except FileNotFoundError:
             self.high_score = 0
 
 sim = simulation()
