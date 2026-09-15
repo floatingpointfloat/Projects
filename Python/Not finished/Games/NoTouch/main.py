@@ -1,8 +1,9 @@
 import random
 import pygame
+from sys import exit
 
 WIDTH,HEIGHT = 800,600
-G = 10
+G = 3
 AVAIBLE_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (128, 0, 128)]
 WALL_WIDTH = 20
 
@@ -30,10 +31,10 @@ class ball:
 
     def inputs(self, input):
         if input == "SPACE":
-            self.speed_y -= 10
+            self.speed_y = -20
 
 start_color = random.choice(AVAIBLE_COLORS)
-ball = ball(WIDTH // 2, HEIGHT // 2, 20, random.choice(start_color), 0, -5)
+ball = ball(WIDTH // 2, HEIGHT // 2, 5, start_color, 0, -20)
 
 class left_wall:
     def __init__(self):
@@ -107,22 +108,79 @@ class simulation:
         self.dt = 1 / 60
 
     def update(self):
-        self.ball.update_position(self.G, self.dt)
+        self.ball.update_position(self.dt)
 
         if self.ball.x - self.ball.radius <= WALL_WIDTH:
             if self.left_wall.collision(self.ball):
                 self.game_over = True
             else:
                 self.score += 1
+                if self.right_wall.cells <= 3:
+                    self.right_wall.cells += 1
                 self.ball.color = random.choice(AVAIBLE_COLORS)
-                self.left_wall.reset(self.ball.color)
+                self.right_wall.reset(self.ball.color)
                 self.ball.speed_x *= -1
         if self.ball.x + self.ball.radius >= WIDTH - WALL_WIDTH:
             if self.right_wall.collision(self.ball):
                 self.game_over = True
             else:
                 self.score += 1
+                if self.left_wall.cells <= 20:
+                    self.left_wall.cells += 1
                 self.ball.color = random.choice(AVAIBLE_COLORS)
-                self.right_wall.reset(self.ball.color)
+                self.left_wall.reset(self.ball.color)
                 self.ball.speed_x *= -1
-            
+
+sim = simulation()
+
+class input:
+    def __init__(self):
+        pass
+
+    def handle_input(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                pygame.quit()
+                exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    return "SPACE"
+        return None
+
+input_handler = input()
+
+class Renderer:
+    def __init__(self, screen, sim):
+        self.screen = screen
+        self.sim = sim
+
+    def render(self):
+        self.screen.fill((0, 0, 0))
+
+        # Draw left wall
+        for i in range(self.sim.left_wall.cells):
+            pygame.draw.rect(self.screen, self.sim.left_wall.colors[i], (0, self.sim.left_wall.positions[i], WALL_WIDTH, self.sim.left_wall.size))
+
+        # Draw right wall
+        for i in range(self.sim.right_wall.cells):
+            pygame.draw.rect(self.screen, self.sim.right_wall.colors[i], (WIDTH - WALL_WIDTH, self.sim.right_wall.positions[i], WALL_WIDTH, self.sim.right_wall.size))
+
+        # Draw ball
+        pygame.draw.circle(self.screen, self.sim.ball.color, (int(self.sim.ball.x), int(self.sim.ball.y)), self.sim.ball.radius)
+
+        # Draw score
+        font = pygame.font.Font(None, 36)
+        score_text = font.render(f"Score: {self.sim.score}", True, (255, 255, 255))
+        self.screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, 10))
+
+        pygame.display.flip()
+
+renderer = Renderer(screen, sim)
+
+if __name__ == "__main__":
+    while True:
+        user_input = input_handler.handle_input()
+        if user_input:
+            sim.ball.inputs(user_input)
+        sim.update()
+        renderer.render()
