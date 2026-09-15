@@ -107,13 +107,27 @@ class simulation:
         self.game_over = False
         self.G = G
         self.dt = 1 / 60
+        self.new_highscore = False
+        self.high_score = 0
+        try:
+            with open("highscore.txt", "r") as f:
+                self.high_score = int(f.read().strip())
+        except (FileNotFoundError, ValueError):
+            self.high_score = 0
+            with open("highscore.txt", "w") as f:
+                f.write(str(self.high_score))
 
     def update(self):
         self.ball.update_position(self.dt)
 
+        # Check for collisions with walls
         if self.ball.x - self.ball.radius <= WALL_WIDTH:
             if self.left_wall.collision(self.ball):
                 self.game_over = True
+                if self.score > self.high_score:
+                    self.new_highscore = True
+                    with open("highscore.txt", "w") as f:
+                        f.write(str(self.score))
             else:
                 self.score += 1
                 if self.right_wall.cells <= 20:
@@ -121,9 +135,14 @@ class simulation:
                 self.ball.color = random.choice(AVAIBLE_COLORS)
                 self.right_wall.reset(self.ball.color)
                 self.ball.speed_x *= -1
+
         if self.ball.x + self.ball.radius >= WIDTH - WALL_WIDTH:
             if self.right_wall.collision(self.ball):
                 self.game_over = True
+                if self.score > self.high_score:
+                    self.new_highscore = True
+                    with open("highscore.txt", "w") as f:
+                        f.write(str(self.score))
             else:
                 self.score += 1
                 if self.left_wall.cells <= 20:
@@ -131,13 +150,19 @@ class simulation:
                 self.ball.color = random.choice(AVAIBLE_COLORS)
                 self.left_wall.reset(self.ball.color)
                 self.ball.speed_x *= -1
+
         #in case the ball goes out of bounds vertically at a wall, reset the game
         if (self.ball.y + self.ball.radius <= 0 or self.ball.y - self.ball.radius >= HEIGHT) and (self.ball.x - self.ball.radius <= WALL_WIDTH or self.ball.x + self.ball.radius >= WIDTH - WALL_WIDTH):
             self.game_over = True
+            if self.score > self.high_score:
+                self.new_highscore = True
+                with open("highscore.txt", "w") as f:
+                    f.write(str(self.score))
 
     def reset(self):
         self.score = 0
         self.game_over = False
+        self.new_highscore = False
         self.ball.x = WIDTH // 2
         self.ball.y = HEIGHT // 2
         self.ball.speed_y = 0
@@ -146,6 +171,11 @@ class simulation:
         self.right_wall.cells = 1
         self.left_wall.reset(self.ball.color)
         self.right_wall.reset(self.ball.color)
+        try:
+            with open("highscore.txt", "r") as f:
+                self.high_score = int(f.read().strip())
+        except (FileNotFoundError, ValueError):
+            self.high_score = 0
 
 sim = simulation()
 
@@ -198,9 +228,12 @@ class Renderer:
 
     def render_game_over(self):
         self.screen.fill((0, 0, 0))
-        font = pygame.font.Font(None, 72)
-        game_over_text = font.render(f"Game Over - Score: {self.sim.score}", True, self.sim.ball.color)
+        font = pygame.font.Font(None, 30)
+        game_over_text = font.render(f"Game Over - Score: {self.sim.score} - High Score: {self.sim.high_score}", True, self.sim.ball.color)
         self.screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - game_over_text.get_height() // 2))
+        if self.sim.new_highscore:
+            highscore_text = font.render("New High Score!", True, self.sim.ball.color)
+            self.screen.blit(highscore_text, (WIDTH // 2 - highscore_text.get_width() // 2, HEIGHT // 2 + 50))
         pygame.display.flip()
 
 renderer = Renderer(screen, sim)
