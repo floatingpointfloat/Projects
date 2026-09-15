@@ -115,7 +115,7 @@ class simulation:
                 self.game_over = True
             else:
                 self.score += 1
-                if self.right_wall.cells <= 3:
+                if self.right_wall.cells <= 20:
                     self.right_wall.cells += 1
                 self.ball.color = random.choice(AVAIBLE_COLORS)
                 self.right_wall.reset(self.ball.color)
@@ -131,6 +131,18 @@ class simulation:
                 self.left_wall.reset(self.ball.color)
                 self.ball.speed_x *= -1
 
+    def reset(self):
+        self.score = 0
+        self.game_over = False
+        self.ball.x = WIDTH // 2
+        self.ball.y = HEIGHT // 2
+        self.ball.speed_y = 0
+        self.ball.speed_x = -20
+        self.left_wall.cells = 1
+        self.right_wall.cells = 1
+        self.left_wall.reset(self.ball.color)
+        self.right_wall.reset(self.ball.color)
+
 sim = simulation()
 
 class input:
@@ -145,6 +157,8 @@ class input:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     return "SPACE"
+                if event.key == pygame.K_r or event.key == pygame.K_SPACE:
+                    sim.reset()
         return None
 
 input_handler = input()
@@ -175,12 +189,23 @@ class Renderer:
 
         pygame.display.flip()
 
+    def render_game_over(self):
+        self.screen.fill((0, 0, 0))
+        font = pygame.font.Font(None, 72)
+        game_over_text = font.render(f"Game Over\nScore: {self.sim.score}", True, (255, 0, 0))
+        self.screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - game_over_text.get_height() // 2))
+        pygame.display.flip()
+
 renderer = Renderer(screen, sim)
 
 if __name__ == "__main__":
     while True:
-        user_input = input_handler.handle_input()
-        if user_input:
-            sim.ball.inputs(user_input)
-        sim.update()
-        renderer.render()
+        if not sim.game_over:
+            user_input = input_handler.handle_input()
+            if user_input:
+                sim.ball.inputs(user_input)
+            sim.update()
+            renderer.render()  
+        else:
+            renderer.render_game_over()
+            input_handler.handle_input()
