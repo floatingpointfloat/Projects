@@ -3,10 +3,10 @@ import pygame
 from sys import exit
 
 WIDTH,HEIGHT = 800,600
-G = 3
+G = 800
 AVAIBLE_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (128, 0, 128)]
 WALL_WIDTH = 20
-SPEED = -20
+SPEED = -500
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -32,7 +32,9 @@ class ball:
 
     def inputs(self, input, dt):
         if input == "SPACE":
-            self.speed_y -= 10 * dt
+            self.speed_y -= 3000 * dt
+        if input == "SHIFT":
+            self.speed_y += 2600 * dt
 
 start_color = random.choice(AVAIBLE_COLORS)
 ball = ball(WIDTH // 2, HEIGHT // 2, 5, start_color, 0, SPEED)
@@ -99,14 +101,14 @@ left_wall = left_wall()
 right_wall = right_wall()
 
 class simulation:
-    def __init__(self):
+    def __init__(self, dt):
         self.left_wall = left_wall
         self.right_wall = right_wall
         self.ball = ball
         self.score = 0
         self.game_over = False
         self.G = G
-        self.dt = 1 / 60
+        self.dt = dt
         self.new_highscore = False
         self.high_score = 0
         try:
@@ -117,8 +119,8 @@ class simulation:
             with open("highscore.txt", "w") as f:
                 f.write(str(self.high_score))
 
-    def update(self):
-        self.ball.update_position(self.dt)
+    def update(self, dt):
+        self.ball.update_position(dt)
 
         # Check for collisions with walls
         if self.ball.x - self.ball.radius <= WALL_WIDTH:
@@ -177,7 +179,7 @@ class simulation:
         self.left_wall.reset(self.ball.color)
         self.right_wall.reset(self.ball.color)
 
-sim = simulation()
+sim = simulation(0.001)
 
 class input:
     def __init__(self, sim):
@@ -196,6 +198,8 @@ class input:
         keys = pygame.key.get_pressed()
         if keys[pygame.K_SPACE]:
             return "SPACE"
+        if keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]:
+            return "SHIFT"
         return None
 
 input_handler = input(sim)
@@ -240,11 +244,12 @@ renderer = Renderer(screen, sim)
 
 if __name__ == "__main__":
     while True:
+        dt = clock.tick(60) / 1000  # Limit to 60 FPS and get delta time in seconds
         if not sim.game_over:
             user_input = input_handler.handle_input()
             if user_input:
-                sim.ball.inputs(user_input, sim.dt)
-            sim.update()
+                sim.ball.inputs(user_input, dt)
+            sim.update(dt)
             renderer.render()  
         else:
             renderer.render_game_over()
