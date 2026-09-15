@@ -146,8 +146,8 @@ class simulation:
 sim = simulation()
 
 class input:
-    def __init__(self):
-        pass
+    def __init__(self, sim):
+        self.sim = sim
 
     def handle_input(self):
         for event in pygame.event.get():
@@ -155,13 +155,16 @@ class input:
                 pygame.quit()
                 exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    return "SPACE"
-                if event.key == pygame.K_r or event.key == pygame.K_SPACE:
-                    sim.reset()
+                if self.sim.game_over:
+                    if event.key == pygame.K_r or event.key == pygame.K_SPACE:
+                        self.sim.reset()
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_SPACE]:
+            return "SPACE"
         return None
 
-input_handler = input()
+input_handler = input(sim)
 
 class Renderer:
     def __init__(self, screen, sim):
@@ -192,7 +195,7 @@ class Renderer:
     def render_game_over(self):
         self.screen.fill((0, 0, 0))
         font = pygame.font.Font(None, 72)
-        game_over_text = font.render(f"Game Over\nScore: {self.sim.score}", True, (255, 0, 0))
+        game_over_text = font.render(f"Game Over - Score: {self.sim.score}", True, self.sim.ball.color)
         self.screen.blit(game_over_text, (WIDTH // 2 - game_over_text.get_width() // 2, HEIGHT // 2 - game_over_text.get_height() // 2))
         pygame.display.flip()
 
