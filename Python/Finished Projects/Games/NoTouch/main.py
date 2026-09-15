@@ -125,9 +125,11 @@ class simulation:
             if self.left_wall.collision(self.ball):
                 self.game_over = True
                 if self.score > self.high_score:
+                    self.high_score = self.score
                     self.new_highscore = True
+
                     with open("highscore.txt", "w") as f:
-                        f.write(str(self.score))
+                        f.write(str(self.high_score))
             else:
                 self.score += 1
                 if self.right_wall.cells <= 20:
@@ -140,9 +142,11 @@ class simulation:
             if self.right_wall.collision(self.ball):
                 self.game_over = True
                 if self.score > self.high_score:
+                    self.high_score = self.score
                     self.new_highscore = True
+
                     with open("highscore.txt", "w") as f:
-                        f.write(str(self.score))
+                        f.write(str(self.high_score))
             else:
                 self.score += 1
                 if self.left_wall.cells <= 20:
@@ -155,9 +159,10 @@ class simulation:
         if (self.ball.y + self.ball.radius <= 0 or self.ball.y - self.ball.radius >= HEIGHT) and (self.ball.x - self.ball.radius <= WALL_WIDTH or self.ball.x + self.ball.radius >= WIDTH - WALL_WIDTH):
             self.game_over = True
             if self.score > self.high_score:
+                self.high_score = self.score
                 self.new_highscore = True
                 with open("highscore.txt", "w") as f:
-                    f.write(str(self.score))
+                    f.write(str(self.high_score))
 
     def reset(self):
         self.score = 0
@@ -171,11 +176,6 @@ class simulation:
         self.right_wall.cells = 1
         self.left_wall.reset(self.ball.color)
         self.right_wall.reset(self.ball.color)
-        try:
-            with open("highscore.txt", "r") as f:
-                self.high_score = int(f.read().strip())
-        except FileNotFoundError:
-            self.high_score = 0
 
 sim = simulation()
 
