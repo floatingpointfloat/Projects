@@ -6,6 +6,7 @@ WIDTH,HEIGHT = 800,600
 G = 3
 AVAIBLE_COLORS = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 165, 0), (128, 0, 128)]
 WALL_WIDTH = 20
+SPEED = -20
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -34,7 +35,7 @@ class ball:
             self.speed_y = -20
 
 start_color = random.choice(AVAIBLE_COLORS)
-ball = ball(WIDTH // 2, HEIGHT // 2, 5, start_color, 0, -20)
+ball = ball(WIDTH // 2, HEIGHT // 2, 5, start_color, 0, SPEED)
 
 class left_wall:
     def __init__(self):
@@ -137,7 +138,7 @@ class simulation:
         self.ball.x = WIDTH // 2
         self.ball.y = HEIGHT // 2
         self.ball.speed_y = 0
-        self.ball.speed_x = -20
+        self.ball.speed_x = SPEED
         self.left_wall.cells = 1
         self.right_wall.cells = 1
         self.left_wall.reset(self.ball.color)
