@@ -1,6 +1,7 @@
 import random
 import pygame
 from sys import exit
+from pathlib import Path
 
 WIDTH,HEIGHT = 800,600
 G = 800
@@ -12,6 +13,8 @@ pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Touch the correct color!")
 clock = pygame.time.Clock()
+
+highscore_file = Path(__file__).parent / "highscore.txt"
 
 class ball:
     def __init__(self, x, y, radius, color, speed_y, speed_x):
@@ -112,12 +115,10 @@ class simulation:
         self.new_highscore = False
         self.high_score = 0
         try:
-            with open("highscore.txt", "r") as f:
+            with open(highscore_file, "r") as f:
                 self.high_score = int(f.read().strip())
         except FileNotFoundError:
             self.high_score = 0
-            with open("highscore.txt", "w") as f:
-                f.write(str(self.high_score))
 
     def update(self, dt):
         self.ball.update_position(dt)
@@ -130,7 +131,7 @@ class simulation:
                     self.high_score = self.score
                     self.new_highscore = True
 
-                    with open("highscore.txt", "w") as f:
+                    with open(highscore_file, "w") as f:
                         f.write(str(self.high_score))
             else:
                 self.score += 1
@@ -147,7 +148,7 @@ class simulation:
                     self.high_score = self.score
                     self.new_highscore = True
 
-                    with open("highscore.txt", "w") as f:
+                    with open(highscore_file, "w") as f:
                         f.write(str(self.high_score))
             else:
                 self.score += 1
@@ -163,7 +164,7 @@ class simulation:
             if self.score > self.high_score:
                 self.high_score = self.score
                 self.new_highscore = True
-                with open("highscore.txt", "w") as f:
+                with open(highscore_file, "w") as f:
                     f.write(str(self.high_score))
 
     def reset(self):
