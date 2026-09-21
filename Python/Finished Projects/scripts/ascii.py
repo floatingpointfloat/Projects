@@ -1,7 +1,7 @@
 import PIL.Image
 
 #used ascii characters
-ASCII_CHARS = [" ", ".", ",", ":", ";", "+", "*", "?", "%", "#", "S", "@"]
+ASCII_CHARS = [" ", " ", ".", ",", ":", ";", "+", "*", "?", "%", "#", "S", "@"]
 
 #function that resizes the image to the correct format
 def resize_image(image, new_width):
