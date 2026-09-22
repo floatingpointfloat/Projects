@@ -25,28 +25,34 @@ def characterize(image):
     return characters
 
 def main(new_width=160): 
-    #attempt to open the image from the user input (path)
-
-    path = input("Enter a valid pathname to the desired image: ")
-
-    try:
-        image = PIL.Image.open(path)
-    except:
-        print(f"""{path} ist not a valid pathname to an image :(
-        Gotta do better next time.""")
-        exit
-
-    #convert image to ascii
-    new_image_data = characterize(grayscale(resize_image(image, new_width)))
-
-    #format
-    pixels_count = len(new_image_data)
-    ascii_image = "\n".join(new_image_data[i:(i+new_width)] for i in range(0, pixels_count, new_width))
-
-    print(ascii_image)
-
-    with open("ascii_art.txt", "w") as f:
-        f.write(ascii_image)
+    while True:
+        #attempt to open the image from the user input (path)
+        path = input("Enter a valid pathname to the desired image: ")
+    
+        try:
+            image = PIL.Image.open(path)
+        except:
+            print(f"""{path} ist not a valid pathname to an image :(
+            Gotta do better next time.""")
+            continue
+    
+        #convert image to ascii
+        new_image_data = characterize(grayscale(resize_image(image, new_width)))
+    
+        #format
+        pixels_count = len(new_image_data)
+        ascii_image = "\n".join(new_image_data[i:(i+new_width)] for i in range(0, pixels_count, new_width))
+    
+        print(ascii_image)
+    
+        with open("ascii_art.txt", "w") as f:
+            f.write(ascii_image)
+            
+        restart = input("Next image? (Y/n)")
+        if upper(restart) == "Y":
+            pass
+        else:
+            break
 
 if __name__ == "__main__":
     main()
