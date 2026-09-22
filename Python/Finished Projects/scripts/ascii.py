@@ -48,7 +48,7 @@ def main(new_width=160):
         with open("ascii_art.txt", "w") as f:
             f.write(ascii_image)
             
-        restart = input("Next image? (Y/n)")
+        restart = input("\nNext image? (Y/n)")
         if upper(restart) == "Y":
             pass
         else:
