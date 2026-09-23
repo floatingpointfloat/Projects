@@ -61,7 +61,7 @@ def main(new_width=160):
             f.write(ascii_image)
 
         restart = input("\nNext image? (Y/n) ")
-        if restart == "Y":
+        if restart.upper() == "Y":
             pass
         else:
             break
